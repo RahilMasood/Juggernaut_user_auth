@@ -1,0 +1,81 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: audit_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: audit_software
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: audit_api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: audit_software
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      
+      # JWT (generate your own in production!)
+      JWT_ACCESS_SECRET: dev_access_secret_change_in_production_min_64_chars_required_here
+      JWT_REFRESH_SECRET: dev_refresh_secret_change_in_production_min_64_chars_required_here
+      JWT_ACCESS_EXPIRY: 15m
+      JWT_REFRESH_EXPIRY: 7d
+      
+      # Email (configure your SMTP)
+      SMTP_HOST: smtp.mailtrap.io
+      SMTP_PORT: 2525
+      SMTP_USER: your_mailtrap_user
+      SMTP_PASS: your_mailtrap_pass
+      EMAIL_FROM: noreply@auditfirm.com
+      
+      # Webhook Security
+      PAYROLL_WEBHOOK_SECRET: dev_webhook_secret_change_in_production
+      
+      # Security
+      BCRYPT_ROUNDS: 12
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+      ENCRYPTION_KEY: dev_encryption_key_32_chars_ok
+      
+      # Application URLs
+      CLIENT_PORTAL_URL: http://localhost:3001
+      CONFIRMING_PARTY_PORTAL_URL: http://localhost:3002
+    
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+      - ./logs:/usr/src/app/logs
+    
+    depends_on:
+      postgres:
+        condition: service_healthy
+    
+    command: sh -c "sleep 5 && npm run dev"
+
+volumes:
+  postgres_data:
+    driver: local
+
