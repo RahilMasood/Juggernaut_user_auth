@@ -3,12 +3,17 @@ const { sequelize } = require('../config/database');
 
 /**
  * EngagementUser Model (Junction table for Engagement-User many-to-many)
- * Represents a user's membership in an engagement team with their role
+ * Represents a user's membership in an engagement team with their engagement-specific role
  */
 const EngagementUser = sequelize.define('EngagementUser', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
+  },
   engagement_id: {
     type: DataTypes.UUID,
-    primaryKey: true,
+    allowNull: false,
     references: {
       model: 'engagements',
       key: 'id'
@@ -16,27 +21,23 @@ const EngagementUser = sequelize.define('EngagementUser', {
   },
   user_id: {
     type: DataTypes.UUID,
-    primaryKey: true,
+    allowNull: false,
     references: {
       model: 'users',
       key: 'id'
     }
   },
   role: {
-    type: DataTypes.ENUM('LEAD', 'MEMBER', 'VIEWER'),
+    type: DataTypes.ENUM(
+      'engagement_partner',
+      'eqr_partner',
+      'engagement_manager',
+      'eqr_manager',
+      'associate',
+      'article'
+    ),
     allowNull: false,
-    defaultValue: 'MEMBER',
-    comment: 'User role in this engagement'
-  },
-  created_at: {
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW
-  },
-  updated_at: {
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW
+    comment: 'Engagement-specific role for this user'
   }
 }, {
   tableName: 'engagement_users',
@@ -46,7 +47,10 @@ const EngagementUser = sequelize.define('EngagementUser', {
     {
       fields: ['engagement_id', 'user_id'],
       unique: true
-    }
+    },
+    { fields: ['engagement_id'] },
+    { fields: ['user_id'] },
+    { fields: ['role'] }
   ]
 });
 

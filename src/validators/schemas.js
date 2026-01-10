@@ -226,6 +226,77 @@ const reviewDeclarationSchema = {
   })
 };
 
+// Admin login schema (Page 1)
+const adminLoginSchema = {
+  body: Joi.object({
+    admin_id: Joi.string().required(),
+    password: Joi.string().required()
+  })
+};
+
+// Create user schema for admin (Page 1)
+const adminCreateUserSchema = {
+  body: Joi.object({
+    user_name: Joi.string().required(),
+    email: Joi.string().email().required(),
+    password: passwordPattern.required(),
+    type: Joi.string().valid('partner', 'manager', 'associate', 'article').required(),
+    payroll_id: Joi.string().optional().allow(null, '')
+  })
+};
+
+// Update user schema for admin (Page 1)
+const adminUpdateUserSchema = {
+  params: Joi.object({
+    id: Joi.string().uuid().required()
+  }),
+  body: Joi.object({
+    user_name: Joi.string().optional(),
+    email: Joi.string().email().optional(),
+    password: passwordPattern.optional(),
+    type: Joi.string().valid('partner', 'manager', 'associate', 'article').optional(),
+    payroll_id: Joi.string().optional().allow(null, '')
+  })
+};
+
+// Create audit client schema (Page 2)
+const createAuditClientSchema = {
+  body: Joi.object({
+    client_name: Joi.string().required(),
+    engagement_partner_id: Joi.string().uuid().required(),
+    engagement_manager_id: Joi.string().uuid().required()
+  })
+};
+
+// Create engagement schema for admin (Page 3)
+const adminCreateEngagementSchema = {
+  params: Joi.object({
+    clientId: Joi.string().uuid().required()
+  }),
+  body: Joi.object({
+    engagement_partner_id: Joi.string().uuid().optional(),
+    engagement_manager_id: Joi.string().uuid().optional()
+  })
+};
+
+// Add user to engagement schema for admin (Page 3)
+const adminAddUserToEngagementSchema = {
+  params: Joi.object({
+    id: Joi.string().uuid().required()
+  }),
+  body: Joi.object({
+    user_id: Joi.string().uuid().required(),
+    role: Joi.string().valid(
+      'engagement_partner',
+      'eqr_partner',
+      'engagement_manager',
+      'eqr_manager',
+      'associate',
+      'article'
+    ).required()
+  })
+};
+
 module.exports = {
   loginSchema,
   createUserSchema,
@@ -244,6 +315,13 @@ module.exports = {
   updateClientSchema,
   addUserForDeclarationSchema,
   submitDeclarationSchema,
-  reviewDeclarationSchema
+  reviewDeclarationSchema,
+  // New admin schemas
+  adminLoginSchema,
+  adminCreateUserSchema,
+  adminUpdateUserSchema,
+  createAuditClientSchema,
+  adminCreateEngagementSchema,
+  adminAddUserToEngagementSchema
 };
 

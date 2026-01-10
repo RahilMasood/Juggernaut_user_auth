@@ -12,6 +12,7 @@
     "setup-db": "node scripts/setup-db.js",
     "migrate": "node migrations/migrate.js",
     "seed-admin": "node scripts/seed-admin.js",
+    "create-firm": "node scripts/create-firm.js",
     "verify": "node scripts/verify.js",
     "init": "npm run setup && npm run setup-db && npm run migrate && npm run seed-admin",
     "docker:up": "docker-compose up -d",

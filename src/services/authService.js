@@ -14,8 +14,7 @@ class AuthService {
       const user = await User.findOne({ 
         where: { email },
         include: [
-          { association: 'firm' },
-          { association: 'roles', include: ['permissions'] }
+          { association: 'firm' }
         ]
       });
 
@@ -79,8 +78,7 @@ class AuthService {
       userId: user.id,
       firmId: user.firm_id,
       email: user.email,
-      userType: user.user_type,
-      roles: user.roles ? user.roles.map(r => r.name) : []
+      type: user.type
     };
 
     return jwt.sign(payload, authConfig.jwt.accessSecret, {
@@ -127,7 +125,7 @@ class AuthService {
         where: { token: refreshTokenValue },
         include: [{
           association: 'user',
-          include: ['firm', { association: 'roles', include: ['permissions'] }]
+          include: ['firm']
         }]
       });
 

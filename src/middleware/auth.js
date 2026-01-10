@@ -1,6 +1,6 @@
 const authService = require('../services/authService');
 const logger = require('../utils/logger');
-const { User, Firm, Role } = require('../models');
+const { User, Firm } = require('../models');
 
 
 /**
@@ -26,14 +26,8 @@ async function authenticate(req, res, next) {
 
     const user = await User.findByPk(decoded.userId, {
       include: [
-        { model: Firm, as: 'firm' },
-        {
-          model: Role,
-          as: 'roles',
-          include: ['permissions']
-        }
+        { model: Firm, as: 'firm' }
       ]
-      
     });
     
 
@@ -80,8 +74,7 @@ async function optionalAuth(req, res, next) {
         userId: decoded.userId,
         firmId: decoded.firmId,
         email: decoded.email,
-        userType: decoded.userType,
-        roles: decoded.roles || []
+        type: decoded.type
       };
     }
   } catch (error) {
@@ -108,7 +101,7 @@ function requireUserType(...allowedTypes) {
     }
 
     // Sequelize converts snake_case to camelCase, but check both to be safe
-    const userType = req.user.userType || req.user.user_type;
+    const userType = req.user.type || req.user.user_type;
     
     if (!allowedTypes.includes(userType)) {
       return res.status(403).json({

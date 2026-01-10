@@ -2,22 +2,27 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
 /**
- * Engagement Model
- * Represents audit engagements for a client
+ * AuditClient Model
+ * Represents audit clients of the firm
  */
-const Engagement = sequelize.define('Engagement', {
+const AuditClient = sequelize.define('AuditClient', {
   id: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
     primaryKey: true
   },
-  audit_client_id: {
+  firm_id: {
     type: DataTypes.UUID,
     allowNull: false,
     references: {
-      model: 'audit_clients',
+      model: 'firms',
       key: 'id'
     }
+  },
+  client_name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    comment: 'Name of the audit client'
   },
   status: {
     type: DataTypes.ENUM('Active', 'Archived'),
@@ -25,14 +30,15 @@ const Engagement = sequelize.define('Engagement', {
     allowNull: false
   }
 }, {
-  tableName: 'engagements',
+  tableName: 'audit_clients',
   timestamps: true,
   underscored: true,
   indexes: [
-    { fields: ['audit_client_id'] },
-    { fields: ['status'] }
+    { fields: ['firm_id'] },
+    { fields: ['status'] },
+    { fields: ['client_name'] }
   ]
 });
 
-module.exports = Engagement;
+module.exports = AuditClient;
 

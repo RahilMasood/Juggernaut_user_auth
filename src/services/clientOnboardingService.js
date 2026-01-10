@@ -1,0 +1,158 @@
+const { AuditClient, Engagement, EngagementUser, Firm, User } = require('../models');
+const { sequelize } = require('../config/database');
+const logger = require('../utils/logger');
+
+class ClientOnboardingService {
+  /**
+   * Create audit client with default engagement and 2 users
+   */
+  async createClient(firmId, clientData) {
+    const transaction = await sequelize.transaction();
+    
+    try {
+      // Verify firm exists
+      const firm = await Firm.findByPk(firmId);
+      if (!firm) {
+        throw new Error('Firm not found');
+      }
+
+      // Verify users exist and belong to the firm
+      const engagementPartner = await User.findOne({
+        where: { 
+          id: clientData.engagement_partner_id,
+          firm_id: firmId
+        }
+      });
+
+      const engagementManager = await User.findOne({
+        where: { 
+          id: clientData.engagement_manager_id,
+          firm_id: firmId
+        }
+      });
+
+      if (!engagementPartner) {
+        throw new Error('Engagement partner not found');
+      }
+
+      if (!engagementManager) {
+        throw new Error('Engagement manager not found');
+      }
+
+      // Create audit client
+      const auditClient = await AuditClient.create({
+        firm_id: firmId,
+        client_name: clientData.client_name,
+        status: 'Active'
+      }, { transaction });
+
+      // Create default engagement
+      const engagement = await Engagement.create({
+        audit_client_id: auditClient.id,
+        status: 'Active'
+      }, { transaction });
+
+      // Assign 2 default users
+      await EngagementUser.bulkCreate([
+        {
+          engagement_id: engagement.id,
+          user_id: clientData.engagement_partner_id,
+          role: 'engagement_partner'
+        },
+        {
+          engagement_id: engagement.id,
+          user_id: clientData.engagement_manager_id,
+          role: 'engagement_manager'
+        }
+      ], { transaction });
+
+      await transaction.commit();
+
+      // Reload with associations
+      await auditClient.reload({
+        include: [
+          {
+            association: 'engagements',
+            include: [
+              {
+                association: 'teamMembers',
+                attributes: ['id', 'user_name', 'email', 'type']
+              }
+            ]
+          }
+        ]
+      });
+
+      return auditClient;
+    } catch (error) {
+      await transaction.rollback();
+      logger.error('Create client error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * List all audit clients for a firm
+   */
+  async listClients(firmId) {
+    try {
+      const clients = await AuditClient.findAll({
+        where: { firm_id: firmId },
+        include: [
+          {
+            association: 'engagements',
+            include: [
+              {
+                association: 'teamMembers',
+                attributes: ['id', 'user_name', 'email', 'type']
+              }
+            ]
+          }
+        ],
+        order: [['created_at', 'DESC']]
+      });
+
+      return clients;
+    } catch (error) {
+      logger.error('List clients error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get audit client by ID
+   */
+  async getClientById(clientId, firmId) {
+    try {
+      const client = await AuditClient.findOne({
+        where: { 
+          id: clientId,
+          firm_id: firmId
+        },
+        include: [
+          {
+            association: 'engagements',
+            include: [
+              {
+                association: 'teamMembers',
+                attributes: ['id', 'user_name', 'email', 'type']
+              }
+            ]
+          }
+        ]
+      });
+
+      if (!client) {
+        throw new Error('Audit client not found');
+      }
+
+      return client;
+    } catch (error) {
+      logger.error('Get client error:', error);
+      throw error;
+    }
+  }
+}
+
+module.exports = new ClientOnboardingService();
+

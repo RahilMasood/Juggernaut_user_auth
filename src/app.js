@@ -13,6 +13,11 @@ const webhookRoutes = require('./routes/webhooks');
 const clientRoutes = require('./routes/clients');
 const independenceRoutes = require('./routes/independence');
 
+// New admin routes for 3 pages
+const adminRoutes = require('./routes/admin');
+const clientOnboardingRoutes = require('./routes/clientOnboarding');
+const engagementManagementRoutes = require('./routes/engagementManagement');
+
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 
@@ -78,6 +83,11 @@ app.use('/api/v1/confirmations', confirmationRoutes);
 app.use('/api/v1/webhooks', webhookRoutes);
 app.use('/api/v1/clients', clientRoutes);
 app.use('/api/v1/independence', independenceRoutes);
+
+// New admin routes for 3 pages
+app.use('/api/v1/admin', adminRoutes); // Page 1: Admin login + User CRUD
+app.use('/api/v1/admin', clientOnboardingRoutes); // Page 2: Client Onboarding
+app.use('/api/v1/admin', engagementManagementRoutes); // Page 3: Engagement Management
 
 // 404 handler
 app.use((req, res) => {

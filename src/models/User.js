@@ -17,6 +17,11 @@ const User = sequelize.define('User', {
       key: 'id'
     }
   },
+  user_name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    comment: 'User display name'
+  },
   email: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -29,26 +34,15 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: false
   },
-  first_name: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  last_name: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  user_type: {
-    type: DataTypes.ENUM('AUDITOR', 'CLIENT', 'CONFIRMING_PARTY'),
+  type: {
+    type: DataTypes.ENUM('partner', 'manager', 'associate', 'article'),
     allowNull: false,
-    defaultValue: 'AUDITOR'
-  },
-  designation: {
-    type: DataTypes.STRING,
-    comment: 'Job title/role in organization (e.g., Partner, Manager, Senior Auditor)'
+    comment: 'Organizational seniority level'
   },
   payroll_id: {
     type: DataTypes.STRING,
-    comment: 'External ID from payroll system'
+    allowNull: true,
+    comment: 'External ID from payroll system for user replacement'
   },
   is_active: {
     type: DataTypes.BOOLEAN,
@@ -78,7 +72,7 @@ const User = sequelize.define('User', {
   indexes: [
     { fields: ['email'], unique: true },
     { fields: ['firm_id'] },
-    { fields: ['user_type'] },
+    { fields: ['type'] },
     { fields: ['payroll_id'] },
     { fields: ['is_active'] }
   ],
