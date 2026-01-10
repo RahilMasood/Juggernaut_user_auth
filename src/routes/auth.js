@@ -15,4 +15,3 @@ router.get('/me', authenticate, authController.getCurrentUser.bind(authControlle
 router.post('/change-password', authenticate, validate(changePasswordSchema), authController.changePassword.bind(authController));
 
 module.exports = router;
-

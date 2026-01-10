@@ -1,5 +1,7 @@
 const authService = require('../services/authService');
 const logger = require('../utils/logger');
+const { User, Firm, Role } = require('../models');
+
 
 /**
  * Authentication middleware
@@ -7,9 +9,8 @@ const logger = require('../utils/logger');
  */
 async function authenticate(req, res, next) {
   try {
-    // Get token from header
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -20,19 +21,34 @@ async function authenticate(req, res, next) {
       });
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-
-    // Verify token
+    const token = authHeader.substring(7);
     const decoded = authService.verifyAccessToken(token);
 
-    // Attach user info to request
-    req.user = {
-      userId: decoded.userId,
-      firmId: decoded.firmId,
-      email: decoded.email,
-      userType: decoded.userType,
-      roles: decoded.roles || []
-    };
+    const user = await User.findByPk(decoded.userId, {
+      include: [
+        { model: Firm, as: 'firm' },
+        {
+          model: Role,
+          as: 'roles',
+          include: ['permissions']
+        }
+      ]
+      
+    });
+    
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'User not found'
+        }
+      });
+    }
+
+    req.user = user;
+    req.auth = decoded; // optional if you want token payload separately
 
     next();
   } catch (error) {
@@ -46,6 +62,7 @@ async function authenticate(req, res, next) {
     });
   }
 }
+
 
 /**
  * Optional authentication middleware
@@ -90,7 +107,10 @@ function requireUserType(...allowedTypes) {
       });
     }
 
-    if (!allowedTypes.includes(req.user.userType)) {
+    // Sequelize converts snake_case to camelCase, but check both to be safe
+    const userType = req.user.userType || req.user.user_type;
+    
+    if (!allowedTypes.includes(userType)) {
       return res.status(403).json({
         success: false,
         error: {

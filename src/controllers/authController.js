@@ -89,7 +89,7 @@ class AuthController {
   async changePassword(req, res, next) {
     try {
       const { old_password, new_password } = req.body;
-      const userId = req.user.userId;
+      const userId = req.user.id;
 
       await authService.changePassword(userId, old_password, new_password);
 
@@ -116,34 +116,24 @@ class AuthController {
    */
   async getCurrentUser(req, res, next) {
     try {
-      const { User } = require('../models');
-      
-      const user = await User.findByPk(req.user.userId, {
-        include: [
-          { association: 'firm' },
-          { association: 'roles', include: ['permissions'] },
-          { association: 'customPermissions' }
-        ]
-      });
-
-      if (!user) {
-        return res.status(404).json({
+      if (!req.user) {
+        return res.status(401).json({
           success: false,
           error: {
-            code: 'NOT_FOUND',
-            message: 'User not found'
+            code: 'UNAUTHORIZED',
+            message: 'Not authenticated'
           }
         });
       }
-
+  
       res.json({
         success: true,
-        data: { user: user.toJSON() }
+        data: { user: req.user.toJSON() }
       });
     } catch (error) {
       next(error);
     }
-  }
+  }  
 }
 
 module.exports = new AuthController();

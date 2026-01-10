@@ -237,4 +237,3 @@ The default password system is now fully implemented and ready to use. Users cre
 **No database changes required** - Deploy and use immediately!
 
 For questions or issues, refer to the comprehensive documentation in `docs/DEFAULT_PASSWORD_SYSTEM.md`.
-

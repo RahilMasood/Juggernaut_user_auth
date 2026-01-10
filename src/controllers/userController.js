@@ -9,7 +9,7 @@ class UserController {
   async createUser(req, res, next) {
     try {
       const userData = req.body;
-      const createdBy = req.user.userId;
+      const createdBy = req.user.id;
 
       const result = await userService.createUser(userData, createdBy);
 
@@ -56,9 +56,9 @@ class UserController {
 
       // Check if user has permission to view this user
       // Users can view themselves, or need manage_users permission
-      if (req.user.userId !== id) {
+      if (req.user.id !== id) {
         const { hasPermission } = require('../middleware/rbac');
-        const canManage = await hasPermission(req.user.userId, 'manage_users');
+        const canManage = await hasPermission(req.user.id, 'manage_users');
         
         if (!canManage) {
           return res.status(403).json({
@@ -119,7 +119,7 @@ class UserController {
     try {
       const { id } = req.params;
       const updateData = req.body;
-      const updatedBy = req.user.userId;
+      const updatedBy = req.user.id;
 
       const user = await userService.updateUser(id, updateData, updatedBy);
 
@@ -145,10 +145,10 @@ class UserController {
   async deactivateUser(req, res, next) {
     try {
       const { id } = req.params;
-      const deactivatedBy = req.user.userId;
+      const deactivatedBy = req.user.id;
 
       // Prevent self-deactivation
-      if (id === req.user.userId) {
+      if (id === req.user.id) {
         return res.status(400).json({
           success: false,
           error: {
@@ -187,9 +187,9 @@ class UserController {
       const { id } = req.params;
 
       // Users can view their own permissions, or need manage_users permission
-      if (req.user.userId !== id) {
+      if (req.user.id !== id) {
         const { hasPermission } = require('../middleware/rbac');
-        const canManage = await hasPermission(req.user.userId, 'manage_users');
+        const canManage = await hasPermission(req.user.id, 'manage_users');
         
         if (!canManage) {
           return res.status(403).json({

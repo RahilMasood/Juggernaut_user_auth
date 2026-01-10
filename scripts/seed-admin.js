@@ -55,15 +55,15 @@ async function seedAdmin() {
         hierarchy_level: 100,
         is_default: true
       });
-
-      // Assign all permissions to Partner role
-      const allPermissions = await Permission.findAll();
-      await partnerRole.addPermissions(allPermissions);
-      
-      console.log(`✅ Created Partner role with all permissions`);
+      console.log(`✅ Created Partner role`);
     } else {
       console.log(`ℹ️  Partner role already exists`);
     }
+
+    // Ensure Partner role has all permissions (update if needed)
+    const allPermissions = await Permission.findAll();
+    await partnerRole.setPermissions(allPermissions);
+    console.log(`✅ Partner role has all ${allPermissions.length} permissions assigned`);
 
     // Create admin user
     const adminEmail = 'admin@example.com';

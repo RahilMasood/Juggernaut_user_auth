@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const engagementController = require('../controllers/engagementController');
 const { authenticate, requireUserType } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/rbac');
 const validate = require('../middleware/validation');
 const { 
   createEngagementSchema, 
@@ -16,7 +17,7 @@ router.use(authenticate);
 router.use(requireUserType('AUDITOR'));
 
 // List engagements
-router.get('/', validate(paginationSchema), engagementController.listEngagements.bind(engagementController));
+router.get('/', validate(paginationSchema), requirePermission('view_engagement'), engagementController.listEngagements.bind(engagementController));
 
 // Get specific engagement
 router.get('/:id', validate(uuidParamSchema), engagementController.getEngagement.bind(engagementController));

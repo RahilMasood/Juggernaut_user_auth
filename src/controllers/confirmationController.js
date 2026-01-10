@@ -9,7 +9,7 @@ class ConfirmationController {
     try {
       const { id: engagementId } = req.params;
       const confirmationData = req.body;
-      const createdBy = req.user.userId;
+      const createdBy = req.user.id;
 
       const result = await confirmationService.createConfirmation(
         engagementId, 
@@ -39,7 +39,7 @@ class ConfirmationController {
   async getConfirmation(req, res, next) {
     try {
       const { id } = req.params;
-      const userId = req.user.userId;
+      const userId = req.user.id;
 
       const confirmation = await confirmationService.getConfirmation(id, userId);
 
@@ -65,7 +65,7 @@ class ConfirmationController {
   async listEngagementConfirmations(req, res, next) {
     try {
       const { id: engagementId } = req.params;
-      const userId = req.user.userId;
+      const userId = req.user.id;
 
       const filters = {
         status: req.query.status,
@@ -99,7 +99,7 @@ class ConfirmationController {
    */
   async listMyConfirmations(req, res, next) {
     try {
-      const userId = req.user.userId;
+      const userId = req.user.id;
 
       const confirmations = await confirmationService.listConfirmationsForParty(userId);
 
@@ -120,7 +120,7 @@ class ConfirmationController {
     try {
       const { id } = req.params;
       const updateData = req.body;
-      const updatedBy = req.user.userId;
+      const updatedBy = req.user.id;
 
       const confirmation = await confirmationService.updateConfirmation(
         id, 
@@ -151,7 +151,7 @@ class ConfirmationController {
     try {
       const { id } = req.params;
       const responseData = req.body;
-      const respondedBy = req.user.userId;
+      const respondedBy = req.user.id;
 
       const confirmation = await confirmationService.respondToConfirmation(
         id, 

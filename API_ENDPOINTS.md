@@ -131,4 +131,3 @@ Provides comprehensive independence declaration management with partner/manager 
 ---
 
 For detailed request/response examples, see **README.md** and **NEW_FEATURES.md**.
-

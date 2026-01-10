@@ -8,7 +8,7 @@ class EngagementController {
   async createEngagement(req, res, next) {
     try {
       const engagementData = req.body;
-      const createdBy = req.user.userId;
+      const createdBy = req.user.id;
 
       const engagement = await engagementService.createEngagement(engagementData, createdBy);
 
@@ -34,7 +34,7 @@ class EngagementController {
   async getEngagement(req, res, next) {
     try {
       const { id } = req.params;
-      const userId = req.user.userId;
+      const userId = req.user.id;
 
       const engagement = await engagementService.getEngagement(id, userId);
 
@@ -59,7 +59,7 @@ class EngagementController {
    */
   async listEngagements(req, res, next) {
     try {
-      const userId = req.user.userId;
+      const userId = req.user.id;
       
       const filters = {
         status: req.query.status,
@@ -77,7 +77,7 @@ class EngagementController {
 
       res.json({
         success: true,
-        data: result
+        data: result.engagements || []
       });
     } catch (error) {
       next(error);
@@ -92,7 +92,7 @@ class EngagementController {
     try {
       const { id } = req.params;
       const updateData = req.body;
-      const updatedBy = req.user.userId;
+      const updatedBy = req.user.id;
 
       const engagement = await engagementService.updateEngagement(id, updateData, updatedBy);
 
@@ -119,7 +119,7 @@ class EngagementController {
     try {
       const { id } = req.params;
       const { user_id, role } = req.body;
-      const addedBy = req.user.userId;
+      const addedBy = req.user.id;
 
       await engagementService.addUserToEngagement(id, user_id, role, addedBy);
 
@@ -147,7 +147,7 @@ class EngagementController {
   async removeUser(req, res, next) {
     try {
       const { id, userId } = req.params;
-      const removedBy = req.user.userId;
+      const removedBy = req.user.id;
 
       await engagementService.removeUserFromEngagement(id, userId, removedBy);
 
@@ -175,7 +175,7 @@ class EngagementController {
   async getEngagementTeam(req, res, next) {
     try {
       const { id } = req.params;
-      const userId = req.user.userId;
+      const userId = req.user.id;
 
       const team = await engagementService.getEngagementTeam(id, userId);
 
