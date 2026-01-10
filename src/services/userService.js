@@ -157,9 +157,7 @@ class UserService {
     try {
       const user = await User.findByPk(userId, {
         include: [
-          { association: 'firm' },
-          { association: 'roles', include: ['permissions'] },
-          { association: 'customPermissions' }
+          { association: 'firm' }
         ]
       });
 
@@ -188,6 +186,11 @@ class UserService {
         where.user_type = filters.user_type;
       }
       
+      // Support new schema 'type' field
+      if (filters.type) {
+        where.type = filters.type;
+      }
+      
       if (filters.is_active !== undefined) {
         where.is_active = filters.is_active;
       }
@@ -195,8 +198,7 @@ class UserService {
       if (filters.search) {
         const { Op } = require('sequelize');
         where[Op.or] = [
-          { first_name: { [Op.iLike]: `%${filters.search}%` } },
-          { last_name: { [Op.iLike]: `%${filters.search}%` } },
+          { user_name: { [Op.iLike]: `%${filters.search}%` } },
           { email: { [Op.iLike]: `%${filters.search}%` } }
         ];
       }
@@ -204,8 +206,7 @@ class UserService {
       const { rows: users, count: total } = await User.findAndCountAll({
         where,
         include: [
-          { association: 'firm', attributes: ['id', 'name'] },
-          { association: 'roles', attributes: ['id', 'name'] }
+          { association: 'firm', attributes: ['id', 'tenant_id'] }
         ],
         limit,
         offset,

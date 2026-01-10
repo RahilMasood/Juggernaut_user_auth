@@ -262,7 +262,7 @@ const adminUpdateUserSchema = {
 // Create audit client schema (Page 2)
 const createAuditClientSchema = {
   body: Joi.object({
-    client_name: Joi.string().required(),
+    client_name: Joi.string().required().trim(),
     engagement_partner_id: Joi.string().uuid().required(),
     engagement_manager_id: Joi.string().uuid().required()
   })

@@ -87,9 +87,10 @@ class UserController {
   async listUsers(req, res, next) {
     try {
       const filters = {
-        firm_id: req.user.firmId, // Users can only see users from their firm
+        firm_id: req.user.firm_id, // Users can only see users from their firm
         user_type: req.query.user_type,
-        is_active: req.query.is_active,
+        type: req.query.type, // Support new schema 'type' field
+        is_active: req.query.is_active !== undefined ? req.query.is_active === 'true' : true, // Default to active users only
         search: req.query.search
       };
 

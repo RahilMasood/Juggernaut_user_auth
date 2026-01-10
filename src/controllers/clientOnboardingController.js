@@ -7,7 +7,8 @@ class ClientOnboardingController {
    */
   async createClient(req, res, next) {
     try {
-      const firmId = req.firm.id;
+      // Support both admin (req.firm) and regular user (req.user) authentication
+      const firmId = req.firm ? req.firm.id : req.user.firm_id;
       const clientData = req.body;
 
       const client = await clientOnboardingService.createClient(firmId, clientData);
@@ -42,7 +43,8 @@ class ClientOnboardingController {
    */
   async listClients(req, res, next) {
     try {
-      const firmId = req.firm.id;
+      // Support both admin (req.firm) and regular user (req.user) authentication
+      const firmId = req.firm ? req.firm.id : req.user.firm_id;
       const clients = await clientOnboardingService.listClients(firmId);
 
       res.json({
@@ -61,7 +63,8 @@ class ClientOnboardingController {
   async getClient(req, res, next) {
     try {
       const { id } = req.params;
-      const firmId = req.firm.id;
+      // Support both admin (req.firm) and regular user (req.user) authentication
+      const firmId = req.firm ? req.firm.id : req.user.firm_id;
 
       const client = await clientOnboardingService.getClientById(id, firmId);
 

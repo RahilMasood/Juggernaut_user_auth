@@ -86,7 +86,8 @@ app.use('/api/v1/independence', independenceRoutes);
 
 // New admin routes for 3 pages
 app.use('/api/v1/admin', adminRoutes); // Page 1: Admin login + User CRUD
-app.use('/api/v1/admin', clientOnboardingRoutes); // Page 2: Client Onboarding
+app.use('/api/v1/admin', clientOnboardingRoutes); // Page 2: Client Onboarding (admin)
+app.use('/api/v1/client-onboarding', clientOnboardingRoutes); // Page 2: Client Onboarding (regular users)
 app.use('/api/v1/admin', engagementManagementRoutes); // Page 3: Engagement Management
 
 // 404 handler
