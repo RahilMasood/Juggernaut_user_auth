@@ -10,15 +10,18 @@ const {
   paginationSchema 
 } = require('../validators/schemas');
 
-// All client routes require authentication and AUDITOR user type
+// All client routes require authentication
 router.use(authenticate);
+
+// Get my clients (where user is partner or manager) - no specific user type required
+// This endpoint is accessible to all authenticated users
+router.get('/my-clients', clientController.getMyClients.bind(clientController));
+
+// Other routes require AUDITOR user type
 router.use(requireUserType('AUDITOR'));
 
 // List clients
 router.get('/', validate(paginationSchema), clientController.listClients.bind(clientController));
-
-// Get my clients (where user is partner or manager)
-router.get('/my-clients', clientController.getMyClients.bind(clientController));
 
 // Get specific client
 router.get('/:id', validate(uuidParamSchema), clientController.getClient.bind(clientController));

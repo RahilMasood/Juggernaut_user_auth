@@ -48,9 +48,10 @@ class EngagementManagementService {
 
       if (defaultEngagement) {
         // This is the first real engagement - replace the default engagement
-        // Update the default engagement to remove the default flag
+        // Update the default engagement to remove the default flag and set engagement name
         await defaultEngagement.update({
-          is_default: false
+          is_default: false,
+          engagement_name: engagementData?.engagement_name || null
         }, { transaction });
 
         engagement = defaultEngagement;
@@ -74,7 +75,8 @@ class EngagementManagementService {
         engagement = await Engagement.create({
           audit_client_id: auditClientId,
           status: 'Active',
-          is_default: false
+          is_default: false,
+          engagement_name: engagementData?.engagement_name || null
         }, { transaction });
 
         // Get partner and manager from the first engagement (or any previous engagement)

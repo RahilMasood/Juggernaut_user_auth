@@ -1,4 +1,4 @@
-const { Client, User, Firm } = require("../models");
+const { Client, User, Firm, AuditClient, Engagement, EngagementUser } = require("../models");
 const authService = require("./authService");
 const policyService = require("./policyService");
 const logger = require("../utils/logger");
@@ -337,40 +337,124 @@ class ClientService {
   /**
    * Get clients where user is engagement partner or manager
    * (Used for Independence Tool access)
+   * Updated to use new schema: gets clients through engagements where user has engagement_partner or engagement_manager role
    */
   async getClientsForUser(userId) {
     try {
+      const { Op } = require('sequelize');
+      
       const user = await User.findByPk(userId);
       if (!user) {
         throw new Error("User not found");
       }
 
-      const clients = await Client.findAll({
+      logger.info(`Getting clients for user: ${user.user_name} (${user.email}), type: ${user.type}, firm_id: ${user.firm_id}`);
+
+      // Get unique client IDs from engagements where user has engagement_partner or engagement_manager role
+      const engagementUsers = await EngagementUser.findAll({
         where: {
-          firm_id: user.firm_id,
-          [require("sequelize").Op.or]: [
-            { engagement_partner_id: userId },
-            { engagement_manager_id: userId },
-          ],
+          user_id: userId,
+          role: {
+            [Op.in]: ['engagement_partner', 'engagement_manager']
+          }
         },
-        include: [
-          {
-            model: User,
-            as: "engagementPartner",
-            attributes: ["id", "first_name", "last_name", "email"],
-          },
-          {
-            model: User,
-            as: "engagementManager",
-            attributes: ["id", "first_name", "last_name", "email"],
-          },
-        ],
-        order: [["created_at", "DESC"]],
+        attributes: ['engagement_id', 'role'],
+        raw: true
       });
+
+      logger.info(`Found ${engagementUsers.length} engagement_user records with partner/manager role`);
+
+      const engagementIds = engagementUsers.map(eu => eu.engagement_id);
+
+      if (engagementIds.length === 0) {
+        logger.info('No engagements found with partner/manager role, checking if user is partner/manager for fallback');
+        // If no engagements found through roles, but user is partner or manager,
+        // return all clients in the firm (they should be able to create engagements for any client)
+        if (user.type === 'partner' || user.type === 'manager') {
+          logger.info('User is partner/manager, returning all active clients in firm');
+          const allClients = await AuditClient.findAll({
+            where: {
+              firm_id: user.firm_id,
+              status: 'Active'
+            },
+            order: [['client_name', 'ASC']],
+          });
+          logger.info(`Returning ${allClients.length} active clients from firm`);
+          return allClients;
+        }
+        return [];
+      }
+
+      // Get engagements and their associated clients
+      // Note: We might want to include default engagements too, as they might have the user assigned
+      const engagements = await Engagement.findAll({
+        where: {
+          id: {
+            [Op.in]: engagementIds
+          }
+          // Don't exclude default engagements - they might have users assigned
+          // is_default: false
+        },
+        attributes: ['audit_client_id', 'id', 'is_default'],
+        raw: true
+      });
+
+      logger.info(`Found ${engagements.length} engagements (including default if any)`);
+
+      const clientIds = [...new Set(engagements.map(e => e.audit_client_id).filter(Boolean))];
+
+      logger.info(`Found ${clientIds.length} unique client IDs: ${JSON.stringify(clientIds)}`);
+
+      if (clientIds.length === 0) {
+        // Fallback: if user is partner/manager, return all clients
+        if (user.type === 'partner' || user.type === 'manager') {
+          logger.info('No clients from engagements, but user is partner/manager, returning all active clients');
+          const allClients = await AuditClient.findAll({
+            where: {
+              firm_id: user.firm_id,
+              status: 'Active'
+            },
+            order: [['client_name', 'ASC']],
+          });
+          logger.info(`Returning ${allClients.length} active clients from firm (fallback)`);
+          return allClients;
+        }
+        logger.warn(`No clients found for user ${userId} (${user.user_name}). User type: ${user.type}`);
+        return [];
+      }
+
+      // Get the audit clients
+      const clients = await AuditClient.findAll({
+        where: {
+          id: {
+            [Op.in]: clientIds
+          },
+          firm_id: user.firm_id
+        },
+        order: [['client_name', 'ASC']],
+      });
+
+      logger.info(`Returning ${clients.length} audit clients for user ${userId} (${user.user_name}): ${clients.map(c => c.client_name).join(', ')}`);
+
+      // If no clients found through engagements, but user is partner or manager,
+      // return all clients in the firm (they should be able to create engagements for any client)
+      if (clients.length === 0 && (user.type === 'partner' || user.type === 'manager')) {
+        logger.info('No clients from engagements, but user is partner/manager, returning all active clients');
+        const allClients = await AuditClient.findAll({
+          where: {
+            firm_id: user.firm_id,
+            status: 'Active'
+          },
+          order: [['client_name', 'ASC']],
+        });
+        logger.info(`Returning ${allClients.length} active clients from firm (fallback)`);
+        return allClients;
+      }
 
       return clients;
     } catch (error) {
       logger.error("Get clients for user error:", error);
+      logger.error("Error stack:", error.stack);
       throw error;
     }
   }

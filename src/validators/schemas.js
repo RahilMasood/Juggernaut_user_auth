@@ -274,6 +274,7 @@ const adminCreateEngagementSchema = {
     clientId: Joi.string().uuid().required()
   }),
   body: Joi.object({
+    engagement_name: Joi.string().optional(),
     engagement_partner_id: Joi.string().uuid().optional(),
     engagement_manager_id: Joi.string().uuid().optional()
   })

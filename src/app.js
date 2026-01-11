@@ -17,6 +17,7 @@ const independenceRoutes = require('./routes/independence');
 const adminRoutes = require('./routes/admin');
 const clientOnboardingRoutes = require('./routes/clientOnboarding');
 const engagementManagementRoutes = require('./routes/engagementManagement');
+const engagementsPublicRoutes = require('./routes/engagementsPublic');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -85,10 +86,13 @@ app.use('/api/v1/clients', clientRoutes);
 app.use('/api/v1/independence', independenceRoutes);
 
 // New admin routes for 3 pages
+// IMPORTANT: Register engagementsPublicRoutes BEFORE engagementManagementRoutes
+// to ensure POST /clients/:clientId/engagements uses regular auth, not admin auth
+app.use('/api/v1/admin', engagementsPublicRoutes); // Create engagement - no admin required (MUST BE FIRST)
 app.use('/api/v1/admin', adminRoutes); // Page 1: Admin login + User CRUD
 app.use('/api/v1/admin', clientOnboardingRoutes); // Page 2: Client Onboarding (admin)
 app.use('/api/v1/client-onboarding', clientOnboardingRoutes); // Page 2: Client Onboarding (regular users)
-app.use('/api/v1/admin', engagementManagementRoutes); // Page 3: Engagement Management
+app.use('/api/v1/admin', engagementManagementRoutes); // Page 3: Engagement Management (other routes)
 
 // 404 handler
 app.use((req, res) => {

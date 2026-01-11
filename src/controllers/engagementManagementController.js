@@ -8,7 +8,17 @@ class EngagementManagementController {
   async createEngagement(req, res, next) {
     try {
       const { clientId } = req.params;
-      const firmId = req.firm.id;
+      // Get firm_id from user (if regular auth) or firm (if admin auth)
+      const firmId = req.user?.firm_id || req.firm?.id;
+      if (!firmId) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Firm ID not found'
+          }
+        });
+      }
       const engagementData = req.body;
 
       const engagement = await engagementManagementService.createEngagement(

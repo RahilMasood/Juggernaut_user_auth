@@ -28,6 +28,11 @@ const Engagement = sequelize.define('Engagement', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
     allowNull: false
+  },
+  engagement_name: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'Name of the engagement (e.g., Test10_FY26)'
   }
 }, {
   tableName: 'engagements',

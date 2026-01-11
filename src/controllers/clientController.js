@@ -79,7 +79,9 @@ class ClientController {
    */
   async getMyClients(req, res, next) {
     try {
+      logger.info(`getMyClients called for user: ${req.user.id} (${req.user.user_name || req.user.email}), type: ${req.user.type}`);
       const clients = await clientService.getClientsForUser(req.user.id);
+      logger.info(`getMyClients returning ${clients.length} clients`);
 
       res.json({
         success: true,
