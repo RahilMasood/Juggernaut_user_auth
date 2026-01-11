@@ -35,6 +35,28 @@ const Firm = sequelize.define('Firm', {
     type: DataTypes.STRING,
     allowNull: false,
     comment: 'Hashed admin password'
+  },
+  site_hostname: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'Site hostname (e.g., juggernautenterprises.sharepoint.com)'
+  },
+  site_path: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'Site path (e.g., /sites/TestCloud)'
+  },
+  confirmation_tool: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+    comment: 'Confirmation tool enabled flag'
+  },
+  sampling_tool: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+    comment: 'Sampling tool enabled flag'
   }
 }, {
   tableName: 'firms',

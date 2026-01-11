@@ -13,6 +13,10 @@ INSERT INTO firms (
     client_secret,
     admin_id,
     admin_password,
+    site_hostname,
+    site_path,
+    confirmation_tool,
+    sampling_tool,
     created_at,
     updated_at
 ) VALUES (
@@ -22,6 +26,10 @@ INSERT INTO firms (
     'your_client_secret_here',            -- Replace with your client_secret
     'your_admin_id_here',                 -- Replace with your admin_id (login username)
     '$2b$10$YOUR_HASHED_PASSWORD_HERE',  -- Replace with bcrypt hashed password
+    'juggernautenterprises.sharepoint.com', -- Replace with your site_hostname or NULL
+    '/sites/TestCloud',                    -- Replace with your site_path or NULL
+    false,                                 -- confirmation_tool (true/false)
+    false,                                 -- sampling_tool (true/false)
     NOW(),
     NOW()
 );
@@ -34,6 +42,10 @@ INSERT INTO firms (
 --     client_secret,
 --     admin_id,
 --     admin_password,
+--     site_hostname,
+--     site_path,
+--     confirmation_tool,
+--     sampling_tool,
 --     created_at,
 --     updated_at
 -- ) VALUES (
@@ -43,6 +55,10 @@ INSERT INTO firms (
 --     'secret_789',
 --     'admin_user',
 --     '$2b$10$rK8X9YzA1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U1V2W3X4Y',
+--     'juggernautenterprises.sharepoint.com',
+--     '/sites/TestCloud',
+--     false,
+--     false,
 --     NOW(),
 --     NOW()
 -- );

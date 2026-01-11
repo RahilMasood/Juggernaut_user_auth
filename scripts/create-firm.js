@@ -26,10 +26,14 @@ async function createFirm() {
     const adminId = await question('Enter admin_id (login username): ');
     const adminPassword = await question('Enter admin_password (will be hashed): ');
     const confirmPassword = await question('Confirm admin_password: ');
+    const siteHostname = await question('Enter site_hostname (e.g., juggernautenterprises.sharepoint.com) [optional]: ');
+    const sitePath = await question('Enter site_path (e.g., /sites/TestCloud) [optional]: ');
+    const confirmationTool = await question('Enable confirmation_tool? (y/n) [default: n]: ');
+    const samplingTool = await question('Enable sampling_tool? (y/n) [default: n]: ');
 
     // Validate inputs
     if (!tenantId || !clientId || !clientSecret || !adminId || !adminPassword) {
-      console.error('\n❌ All fields are required!');
+      console.error('\n❌ Required fields are missing!');
       process.exit(1);
     }
 
@@ -56,6 +60,10 @@ async function createFirm() {
     console.log('\n⏳ Hashing password...');
     const hashedPassword = await bcrypt.hash(adminPassword, authConfig.bcrypt.rounds);
 
+    // Parse boolean values
+    const confirmationToolEnabled = confirmationTool.toLowerCase() === 'y' || confirmationTool.toLowerCase() === 'yes';
+    const samplingToolEnabled = samplingTool.toLowerCase() === 'y' || samplingTool.toLowerCase() === 'yes';
+
     // Create the firm
     console.log('⏳ Creating firm...');
     const firm = await Firm.create({
@@ -63,16 +71,24 @@ async function createFirm() {
       client_id: clientId,
       client_secret: clientSecret,
       admin_id: adminId,
-      admin_password: hashedPassword
+      admin_password: hashedPassword,
+      site_hostname: siteHostname.trim() || null,
+      site_path: sitePath.trim() || null,
+      confirmation_tool: confirmationToolEnabled,
+      sampling_tool: samplingToolEnabled
     });
 
     console.log('\n✅ Firm created successfully!');
     console.log('\nFirm Details:');
     console.log('─'.repeat(50));
-    console.log(`Firm ID:        ${firm.id}`);
-    console.log(`Tenant ID:      ${firm.tenant_id}`);
-    console.log(`Client ID:      ${firm.client_id}`);
-    console.log(`Admin ID:       ${firm.admin_id}`);
+    console.log(`Firm ID:            ${firm.id}`);
+    console.log(`Tenant ID:          ${firm.tenant_id}`);
+    console.log(`Client ID:          ${firm.client_id}`);
+    console.log(`Admin ID:           ${firm.admin_id}`);
+    console.log(`Site Hostname:      ${firm.site_hostname || 'Not set'}`);
+    console.log(`Site Path:          ${firm.site_path || 'Not set'}`);
+    console.log(`Confirmation Tool:  ${firm.confirmation_tool ? 'Enabled' : 'Disabled'}`);
+    console.log(`Sampling Tool:      ${firm.sampling_tool ? 'Enabled' : 'Disabled'}`);
     console.log('─'.repeat(50));
     console.log('\n💡 You can now login using:');
     console.log(`   POST /api/v1/admin/login`);
