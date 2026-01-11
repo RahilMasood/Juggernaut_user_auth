@@ -23,6 +23,11 @@ const Engagement = sequelize.define('Engagement', {
     type: DataTypes.ENUM('Active', 'Archived'),
     defaultValue: 'Active',
     allowNull: false
+  },
+  is_default: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false
   }
 }, {
   tableName: 'engagements',
@@ -30,7 +35,8 @@ const Engagement = sequelize.define('Engagement', {
   underscored: true,
   indexes: [
     { fields: ['audit_client_id'] },
-    { fields: ['status'] }
+    { fields: ['status'] },
+    { fields: ['is_default'] }
   ]
 });
 

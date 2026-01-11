@@ -58,10 +58,11 @@ class ClientOnboardingService {
         status: 'Active'
       }, { transaction });
 
-      // Create default engagement
+      // Create default engagement (marked as default, will be used/replaced when first real engagement is created)
       const engagement = await Engagement.create({
         audit_client_id: auditClient.id,
-        status: 'Active'
+        status: 'Active',
+        is_default: true
       }, { transaction });
 
       // Assign partner and manager to engagement

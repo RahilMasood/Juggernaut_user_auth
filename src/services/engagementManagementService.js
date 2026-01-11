@@ -5,7 +5,8 @@ const logger = require('../utils/logger');
 class EngagementManagementService {
   /**
    * Create new engagement for an audit client
-   * Copies default users from previous engagement or assigns new ones
+   * If default engagement exists, replaces it; otherwise creates new engagement
+   * Always auto-assigns partner and manager from default/first engagement
    */
   async createEngagement(auditClientId, firmId, engagementData) {
     const transaction = await sequelize.transaction();
@@ -23,53 +24,61 @@ class EngagementManagementService {
         throw new Error('Audit client not found');
       }
 
-      // Create engagement
-      const engagement = await Engagement.create({
-        audit_client_id: auditClientId,
-        status: 'Active'
-      }, { transaction });
-
-      // If users are provided, assign them; otherwise copy from previous engagement
-      if (engagementData.engagement_partner_id && engagementData.engagement_manager_id) {
-        // Verify users exist and belong to the firm
-        const engagementPartner = await User.findOne({
-          where: { 
-            id: engagementData.engagement_partner_id,
-            firm_id: firmId
+      // Check if there's a default engagement (created during client onboarding)
+      const defaultEngagement = await Engagement.findOne({
+        where: { 
+          audit_client_id: auditClientId,
+          is_default: true
+        },
+        include: [
+          {
+            association: 'teamMembers',
+            through: {
+              where: {
+                role: ['engagement_partner', 'engagement_manager']
+              }
+            }
           }
-        });
+        ]
+      });
 
-        const engagementManager = await User.findOne({
-          where: { 
-            id: engagementData.engagement_manager_id,
-            firm_id: firmId
-          }
-        });
+      let engagement;
+      let engagementPartnerId;
+      let engagementManagerId;
 
-        if (!engagementPartner) {
-          throw new Error('Engagement partner not found');
+      if (defaultEngagement) {
+        // This is the first real engagement - replace the default engagement
+        // Update the default engagement to remove the default flag
+        await defaultEngagement.update({
+          is_default: false
+        }, { transaction });
+
+        engagement = defaultEngagement;
+
+        // Get partner and manager from default engagement
+        const engagementPartner = defaultEngagement.teamMembers.find(
+          u => u.EngagementUser && u.EngagementUser.role === 'engagement_partner'
+        );
+        const engagementManager = defaultEngagement.teamMembers.find(
+          u => u.EngagementUser && u.EngagementUser.role === 'engagement_manager'
+        );
+
+        if (!engagementPartner || !engagementManager) {
+          throw new Error('Default engagement missing partner or manager');
         }
 
-        if (!engagementManager) {
-          throw new Error('Engagement manager not found');
-        }
-
-        // Assign provided users
-        await EngagementUser.bulkCreate([
-          {
-            engagement_id: engagement.id,
-            user_id: engagementData.engagement_partner_id,
-            role: 'engagement_partner'
-          },
-          {
-            engagement_id: engagement.id,
-            user_id: engagementData.engagement_manager_id,
-            role: 'engagement_manager'
-          }
-        ], { transaction });
+        engagementPartnerId = engagementPartner.id;
+        engagementManagerId = engagementManager.id;
       } else {
-        // Copy from most recent engagement for this client
-        const previousEngagement = await Engagement.findOne({
+        // Create new engagement (not the first one)
+        engagement = await Engagement.create({
+          audit_client_id: auditClientId,
+          status: 'Active',
+          is_default: false
+        }, { transaction });
+
+        // Get partner and manager from the first engagement (or any previous engagement)
+        const firstEngagement = await Engagement.findOne({
           where: { audit_client_id: auditClientId },
           include: [
             {
@@ -81,32 +90,62 @@ class EngagementManagementService {
               }
             }
           ],
-          order: [['created_at', 'DESC']]
+          order: [['created_at', 'ASC']]
         });
 
-        if (previousEngagement && previousEngagement.teamMembers && previousEngagement.teamMembers.length >= 2) {
-          const engagementPartner = previousEngagement.teamMembers.find(
-            u => u.EngagementUser && u.EngagementUser.role === 'engagement_partner'
-          );
-          const engagementManager = previousEngagement.teamMembers.find(
-            u => u.EngagementUser && u.EngagementUser.role === 'engagement_manager'
-          );
-
-          if (engagementPartner && engagementManager) {
-            await EngagementUser.bulkCreate([
-              {
-                engagement_id: engagement.id,
-                user_id: engagementPartner.id,
-                role: 'engagement_partner'
-              },
-              {
-                engagement_id: engagement.id,
-                user_id: engagementManager.id,
-                role: 'engagement_manager'
-              }
-            ], { transaction });
-          }
+        if (!firstEngagement || !firstEngagement.teamMembers || firstEngagement.teamMembers.length < 2) {
+          throw new Error('No previous engagement found with partner and manager assigned');
         }
+
+        const engagementPartner = firstEngagement.teamMembers.find(
+          u => u.EngagementUser && u.EngagementUser.role === 'engagement_partner'
+        );
+        const engagementManager = firstEngagement.teamMembers.find(
+          u => u.EngagementUser && u.EngagementUser.role === 'engagement_manager'
+        );
+
+        if (!engagementPartner || !engagementManager) {
+          throw new Error('Previous engagement missing partner or manager');
+        }
+
+        engagementPartnerId = engagementPartner.id;
+        engagementManagerId = engagementManager.id;
+      }
+
+      // Auto-assign partner and manager to engagement (if not already assigned)
+      // Check if they're already assigned (for default engagement case)
+      const existingPartner = await EngagementUser.findOne({
+        where: {
+          engagement_id: engagement.id,
+          user_id: engagementPartnerId,
+          role: 'engagement_partner'
+        },
+        transaction
+      });
+
+      const existingManager = await EngagementUser.findOne({
+        where: {
+          engagement_id: engagement.id,
+          user_id: engagementManagerId,
+          role: 'engagement_manager'
+        },
+        transaction
+      });
+
+      if (!existingPartner) {
+        await EngagementUser.create({
+          engagement_id: engagement.id,
+          user_id: engagementPartnerId,
+          role: 'engagement_partner'
+        }, { transaction });
+      }
+
+      if (!existingManager) {
+        await EngagementUser.create({
+          engagement_id: engagement.id,
+          user_id: engagementManagerId,
+          role: 'engagement_manager'
+        }, { transaction });
       }
 
       await transaction.commit();
@@ -134,6 +173,7 @@ class EngagementManagementService {
 
   /**
    * List engagements for an audit client
+   * Excludes default engagements (placeholders created during client onboarding)
    */
   async listEngagements(auditClientId, firmId) {
     try {
@@ -150,7 +190,10 @@ class EngagementManagementService {
       }
 
       const engagements = await Engagement.findAll({
-        where: { audit_client_id: auditClientId },
+        where: { 
+          audit_client_id: auditClientId,
+          is_default: false // Exclude default placeholder engagements
+        },
         include: [
           {
             association: 'teamMembers',
