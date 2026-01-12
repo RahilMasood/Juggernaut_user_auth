@@ -12,6 +12,7 @@ const confirmationRoutes = require('./routes/confirmation');
 const webhookRoutes = require('./routes/webhooks');
 const clientRoutes = require('./routes/clients');
 const independenceRoutes = require('./routes/independence');
+const firmRoutes = require('./routes/firms');
 
 // New admin routes for 3 pages
 const adminRoutes = require('./routes/admin');
@@ -84,6 +85,7 @@ app.use('/api/v1/confirmations', confirmationRoutes);
 app.use('/api/v1/webhooks', webhookRoutes);
 app.use('/api/v1/clients', clientRoutes);
 app.use('/api/v1/independence', independenceRoutes);
+app.use('/api/v1/firms', firmRoutes);
 
 // New admin routes for 3 pages
 // IMPORTANT: Register engagementsPublicRoutes BEFORE engagementManagementRoutes
