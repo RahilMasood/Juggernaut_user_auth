@@ -1,4 +1,4 @@
-const { Engagement, User } = require('../models');
+const { Engagement, User, AuditClient } = require('../models');
 const policyService = require('./policyService');
 const authService = require('./authService');
 const logger = require('../utils/logger');
@@ -94,50 +94,79 @@ class EngagementService {
 
   /**
    * List engagements user has access to
+   * Returns all engagements where the user is a team member (via engagement_users table)
    */
   async listEngagements(userId, filters = {}, pagination = {}) {
     try {
-      const { page = 1, limit = 20, sort_by = 'created_at', sort_order = 'DESC' } = pagination;
+      const { page = 1, limit = 100, sort_by = 'created_at', sort_order = 'DESC' } = pagination;
       const offset = (page - 1) * limit;
+      const { Op } = require('sequelize');
 
       const user = await User.findByPk(userId);
       if (!user) {
         throw new Error('User not found');
       }
 
-      const where = {
-        firm_id: user.firm_id
-      };
-
+      // Build where clause for engagements
+      const engagementWhere = {};
       if (filters.status) {
-        where.status = filters.status;
+        engagementWhere.status = filters.status;
       }
 
+      // Build where clause for audit client (if filtering by client_name)
+      const clientWhere = {};
       if (filters.client_name) {
-        const { Op } = require('sequelize');
-        where.client_name = { [Op.iLike]: `%${filters.client_name}%` };
+        clientWhere.client_name = { [Op.iLike]: `%${filters.client_name}%` };
       }
 
-      // Get engagements where user is a team member
+      // Get engagements where user is a team member via engagement_users
       const { rows: engagements, count: total } = await Engagement.findAndCountAll({
-        where,
+        where: engagementWhere,
         include: [
           {
-            association: 'teamMembers',
-            where: { id: userId },
-            attributes: [],
-            required: true // Only get engagements where user is a team member
+            model: AuditClient,
+            as: 'auditClient',
+            where: clientWhere,
+            required: true,
+            attributes: ['id', 'client_name', 'status', 'firm_id']
           },
-          { association: 'creator', attributes: ['id', 'first_name', 'last_name'] }
+          {
+            model: User,
+            as: 'teamMembers',
+            through: {
+              where: {
+                user_id: userId
+              }
+            },
+            attributes: ['id', 'user_name', 'email', 'type'],
+            required: true // Only get engagements where user is a team member
+          }
         ],
+        attributes: ['id', 'audit_client_id', 'status', 'is_default', 'engagement_name', 'created_at', 'updated_at'],
         limit,
         offset,
         order: [[sort_by, sort_order]],
         distinct: true
       });
 
+      // Format the response to include client_name and engagement_name
+      const formattedEngagements = engagements.map(engagement => {
+        const engagementData = engagement.toJSON();
+        return {
+          id: engagementData.id,
+          audit_client_id: engagementData.audit_client_id,
+          status: engagementData.status,
+          is_default: engagementData.is_default,
+          engagement_name: engagementData.engagement_name,
+          client_name: engagementData.auditClient?.client_name,
+          teamMembers: engagementData.teamMembers || [],
+          created_at: engagementData.created_at,
+          updated_at: engagementData.updated_at
+        };
+      });
+
       return {
-        engagements,
+        engagements: formattedEngagements,
         pagination: {
           page,
           limit,

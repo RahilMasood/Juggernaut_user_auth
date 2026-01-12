@@ -12,12 +12,12 @@ const {
   paginationSchema 
 } = require('../validators/schemas');
 
-// All engagement routes require authentication and AUDITOR user type
+// All engagement routes require authentication
 router.use(authenticate);
-router.use(requireUserType('AUDITOR'));
 
-// List engagements
-router.get('/', validate(paginationSchema), requirePermission('view_engagement'), engagementController.listEngagements.bind(engagementController));
+// List engagements - accessible to all authenticated users
+// Returns engagements where the user is a team member
+router.get('/', validate(paginationSchema), engagementController.listEngagements.bind(engagementController));
 
 // Get specific engagement
 router.get('/:id', validate(uuidParamSchema), engagementController.getEngagement.bind(engagementController));
