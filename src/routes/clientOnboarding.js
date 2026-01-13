@@ -10,6 +10,7 @@ const { createAuditClientSchema, uuidParamSchema } = require('../validators/sche
 router.post('/clients', authenticateAdmin, validate(createAuditClientSchema), clientOnboardingController.createClient.bind(clientOnboardingController));
 router.get('/clients', authenticateAdmin, clientOnboardingController.listClients.bind(clientOnboardingController));
 router.get('/clients/:id', authenticateAdmin, validate(uuidParamSchema), clientOnboardingController.getClient.bind(clientOnboardingController));
+router.patch('/clients/:id/approve', authenticateAdmin, validate(uuidParamSchema), clientOnboardingController.approveClient.bind(clientOnboardingController));
 
 // Regular user routes (for client onboarding portal - partner/manager only)
 // These routes allow authenticated users (partner/manager) to create clients

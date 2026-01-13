@@ -31,8 +31,8 @@ const AuditClient = sequelize.define('AuditClient', {
     comment: 'Auto-generated client identifier based on client_name'
   },
   status: {
-    type: DataTypes.ENUM('Active', 'Archived'),
-    defaultValue: 'Active',
+    type: DataTypes.ENUM('Pending', 'Active', 'Archived'),
+    defaultValue: 'Pending',
     allowNull: false
   }
 }, {

@@ -82,6 +82,35 @@ class ClientOnboardingController {
       });
     }
   }
+
+  /**
+   * Approve Audit Client (change status from Pending to Active)
+   * PATCH /api/v1/admin/clients/:id/approve
+   */
+  async approveClient(req, res, next) {
+    try {
+      const { id } = req.params;
+      const firmId = req.firm ? req.firm.id : req.user.firm_id;
+
+      const client = await clientOnboardingService.approveClient(id, firmId);
+
+      res.json({
+        success: true,
+        data: { 
+          client,
+          message: 'Client approved successfully'
+        }
+      });
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: error.message
+        }
+      });
+    }
+  }
 }
 
 module.exports = new ClientOnboardingController();

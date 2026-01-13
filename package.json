@@ -13,6 +13,7 @@
     "migrate": "node migrations/migrate.js",
     "migrate-add-is-default": "node migrations/migrate-add-is-default.js",
     "migrate-add-no-users": "node migrations/migrate-add-no-users.js",
+    "migrate-add-pending-status": "node migrations/migrate-add-pending-status.js",
     "seed-admin": "node scripts/seed-admin.js",
     "create-firm": "node scripts/create-firm.js",
     "verify": "node scripts/verify.js",

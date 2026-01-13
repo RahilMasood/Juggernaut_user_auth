@@ -55,7 +55,7 @@ class ClientOnboardingService {
       const auditClient = await AuditClient.create({
         firm_id: firmId,
         client_name: clientData.client_name,
-        status: 'Active'
+        status: 'Pending'
       }, { transaction });
 
       // Create default engagement (marked as default, will be used/replaced when first real engagement is created)
@@ -162,6 +162,51 @@ class ClientOnboardingService {
       return client;
     } catch (error) {
       logger.error('Get client error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Approve client (change status from Pending to Active)
+   */
+  async approveClient(clientId, firmId) {
+    try {
+      const client = await AuditClient.findOne({
+        where: { 
+          id: clientId,
+          firm_id: firmId
+        }
+      });
+
+      if (!client) {
+        throw new Error('Audit client not found');
+      }
+
+      if (client.status !== 'Pending') {
+        throw new Error(`Client status is already ${client.status}. Only Pending clients can be approved.`);
+      }
+
+      client.status = 'Active';
+      await client.save();
+
+      // Reload with associations
+      await client.reload({
+        include: [
+          {
+            association: 'engagements',
+            include: [
+              {
+                association: 'teamMembers',
+                attributes: ['id', 'user_name', 'email', 'type']
+              }
+            ]
+          }
+        ]
+      });
+
+      return client;
+    } catch (error) {
+      logger.error('Approve client error:', error);
       throw error;
     }
   }
