@@ -93,7 +93,14 @@ const addUserToEngagementSchema = {
   }),
   body: Joi.object({
     user_id: Joi.string().uuid().required(),
-    role: Joi.string().valid('LEAD', 'MEMBER', 'VIEWER').default('MEMBER')
+    role: Joi.string().valid(
+      'engagement_partner',
+      'eqr_partner',
+      'engagement_manager',
+      'eqr_manager',
+      'associate',
+      'article'
+    ).default('associate')
   })
 };
 

@@ -1,4 +1,4 @@
-const { Engagement, User, AuditClient } = require('../models');
+const { Engagement, User, AuditClient, EngagementUser } = require('../models');
 const policyService = require('./policyService');
 const authService = require('./authService');
 const logger = require('../utils/logger');
@@ -67,8 +67,9 @@ class EngagementService {
           { association: 'firm', attributes: ['id', 'name'] },
           { association: 'creator', attributes: ['id', 'email', 'first_name', 'last_name'] },
           {
-            association: 'teamMembers',
-            attributes: ['id', 'email', 'first_name', 'last_name', 'user_type'],
+            model: User,
+            as: 'teamMembers',
+            attributes: ['id', 'user_name', 'email', 'type'],
             through: { attributes: ['role'] }
           }
         ]
@@ -231,21 +232,45 @@ class EngagementService {
 
   /**
    * Add user to engagement team
+   * Uses EngagementUser model directly to ensure database is updated
    */
-  async addUserToEngagement(engagementId, userIdToAdd, role = 'MEMBER', addedBy) {
+  async addUserToEngagement(engagementId, userIdToAdd, role = 'associate', addedBy) {
     try {
+      // Get engagement
       const engagement = await Engagement.findByPk(engagementId);
 
       if (!engagement) {
         throw new Error('Engagement not found');
       }
 
+      // Get firm_id from engagement's audit client
+      const auditClient = await AuditClient.findByPk(engagement.audit_client_id);
+      if (!auditClient) {
+        throw new Error('Audit client not found for engagement');
+      }
+      const firmId = auditClient.firm_id;
+
       // Check if adding user has access (if not system operation)
+      // Only allow engagement_partner or engagement_manager to add users
       if (addedBy && addedBy !== userIdToAdd) {
         const hasAccess = await this.checkUserAccess(engagementId, addedBy);
         
         if (!hasAccess) {
           throw new Error('Access denied to this engagement');
+        }
+
+        // Additional check: verify user has partner or manager role
+        const currentUserMember = await EngagementUser.findOne({
+          where: {
+            engagement_id: engagementId,
+            user_id: addedBy
+          }
+        });
+
+        if (currentUserMember && 
+            currentUserMember.role !== 'engagement_partner' && 
+            currentUserMember.role !== 'engagement_manager') {
+          throw new Error('Only engagement partners and managers can add users');
         }
       }
 
@@ -256,27 +281,34 @@ class EngagementService {
         throw new Error('User to add not found');
       }
 
-      if (userToAdd.firm_id !== engagement.firm_id) {
+      if (userToAdd.firm_id !== firmId) {
         throw new Error('User does not belong to the same firm');
       }
 
       // Check if user is already in engagement
-      const existingMember = await engagement.hasTeamMember(userToAdd);
+      const existingMember = await EngagementUser.findOne({
+        where: {
+          engagement_id: engagementId,
+          user_id: userIdToAdd
+        }
+      });
       
       if (existingMember) {
         throw new Error('User is already a member of this engagement');
       }
 
-      // Add user to engagement with role
-      await engagement.addTeamMember(userToAdd, {
-        through: { role }
+      // Add user to engagement by creating EngagementUser record directly in database
+      const engagementUser = await EngagementUser.create({
+        engagement_id: engagementId,
+        user_id: userIdToAdd,
+        role: role
       });
 
       // Log user addition
       if (addedBy) {
         await authService.logAuditEvent(
           addedBy,
-          engagement.firm_id,
+          firmId,
           'ADD_USER_TO_ENGAGEMENT',
           'ENGAGEMENT',
           engagement.id,
@@ -287,7 +319,7 @@ class EngagementService {
         );
       }
 
-      return true;
+      return engagementUser;
     } catch (error) {
       logger.error('Add user to engagement error:', error);
       throw error;
@@ -361,9 +393,12 @@ class EngagementService {
       const engagement = await Engagement.findByPk(engagementId, {
         include: [
           {
-            association: 'teamMembers',
-            attributes: ['id', 'email', 'first_name', 'last_name', 'user_type', 'designation'],
-            through: { attributes: ['role'] }
+            model: User,
+            as: 'teamMembers',
+            attributes: ['id', 'user_name', 'email', 'type'],
+            through: { 
+              attributes: ['role']
+            }
           }
         ]
       });
@@ -372,7 +407,19 @@ class EngagementService {
         throw new Error('Engagement not found');
       }
 
-      return engagement.teamMembers;
+      // Format the response to include role from the through table
+      // Sequelize stores through table data as member.EngagementUser
+      const teamMembers = engagement.teamMembers.map(member => {
+        return {
+          id: member.id,
+          user_name: member.user_name,
+          email: member.email,
+          type: member.type,
+          role: member.EngagementUser ? member.EngagementUser.role : null
+        };
+      });
+
+      return teamMembers;
     } catch (error) {
       logger.error('Get engagement team error:', error);
       throw error;
