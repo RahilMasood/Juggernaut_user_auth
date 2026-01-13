@@ -13,6 +13,17 @@ class UserManagementService {
         throw new Error('Firm not found');
       }
 
+      // Check user limit (if no_users > 0, enforce limit; if 0, unlimited)
+      if (firm.no_users > 0) {
+        const currentUserCount = await User.count({
+          where: { firm_id: firmId }
+        });
+
+        if (currentUserCount >= firm.no_users) {
+          throw new Error(`User limit reached. Maximum ${firm.no_users} users allowed for this firm.`);
+        }
+      }
+
       // Check if email already exists
       const existingUser = await User.findOne({
         where: { email: userData.email }

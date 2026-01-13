@@ -8,6 +8,7 @@ const { loginSchema, changePasswordSchema } = require('../validators/schemas');
 // Public routes
 router.post('/login', validate(loginSchema), authController.login.bind(authController));
 router.post('/refresh', authController.refresh.bind(authController));
+// Logout route - no validation needed, handles both JSON and sendBeacon requests
 router.post('/logout', authController.logout.bind(authController));
 
 // Protected routes

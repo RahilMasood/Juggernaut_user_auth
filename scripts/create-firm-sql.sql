@@ -17,6 +17,7 @@ INSERT INTO firms (
     site_path,
     confirmation_tool,
     sampling_tool,
+    no_users,
     created_at,
     updated_at
 ) VALUES (
@@ -30,6 +31,7 @@ INSERT INTO firms (
     '/sites/TestCloud',                    -- Replace with your site_path or NULL
     false,                                 -- confirmation_tool (true/false)
     false,                                 -- sampling_tool (true/false)
+    0,                                     -- no_users (0 = unlimited, or set a number like 10, 50, 100, etc.)
     NOW(),
     NOW()
 );
@@ -46,6 +48,7 @@ INSERT INTO firms (
 --     site_path,
 --     confirmation_tool,
 --     sampling_tool,
+--     no_users,
 --     created_at,
 --     updated_at
 -- ) VALUES (
@@ -59,6 +62,7 @@ INSERT INTO firms (
 --     '/sites/TestCloud',
 --     false,
 --     false,
+--     50,                                    -- Maximum 50 users allowed
 --     NOW(),
 --     NOW()
 -- );

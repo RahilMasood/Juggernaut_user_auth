@@ -30,6 +30,7 @@ async function createFirm() {
     const sitePath = await question('Enter site_path (e.g., /sites/TestCloud) [optional]: ');
     const confirmationTool = await question('Enable confirmation_tool? (y/n) [default: n]: ');
     const samplingTool = await question('Enable sampling_tool? (y/n) [default: n]: ');
+    const noUsers = await question('Enter maximum number of users allowed (no_users) [default: 0 for unlimited]: ');
 
     // Validate inputs
     if (!tenantId || !clientId || !clientSecret || !adminId || !adminPassword) {
@@ -63,6 +64,13 @@ async function createFirm() {
     // Parse boolean values
     const confirmationToolEnabled = confirmationTool.toLowerCase() === 'y' || confirmationTool.toLowerCase() === 'yes';
     const samplingToolEnabled = samplingTool.toLowerCase() === 'y' || samplingTool.toLowerCase() === 'yes';
+    
+    // Parse no_users (default to 0 for unlimited)
+    const noUsersValue = parseInt(noUsers.trim()) || 0;
+    if (noUsersValue < 0) {
+      console.error('\n❌ Number of users must be 0 or greater! (0 means unlimited)');
+      process.exit(1);
+    }
 
     // Create the firm
     console.log('⏳ Creating firm...');
@@ -75,7 +83,8 @@ async function createFirm() {
       site_hostname: siteHostname.trim() || null,
       site_path: sitePath.trim() || null,
       confirmation_tool: confirmationToolEnabled,
-      sampling_tool: samplingToolEnabled
+      sampling_tool: samplingToolEnabled,
+      no_users: noUsersValue
     });
 
     console.log('\n✅ Firm created successfully!');
@@ -89,6 +98,7 @@ async function createFirm() {
     console.log(`Site Path:          ${firm.site_path || 'Not set'}`);
     console.log(`Confirmation Tool:  ${firm.confirmation_tool ? 'Enabled' : 'Disabled'}`);
     console.log(`Sampling Tool:      ${firm.sampling_tool ? 'Enabled' : 'Disabled'}`);
+    console.log(`Max Users:          ${firm.no_users === 0 ? 'Unlimited' : firm.no_users}`);
     console.log('─'.repeat(50));
     console.log('\n💡 You can now login using:');
     console.log(`   POST /api/v1/admin/login`);

@@ -1,6 +1,7 @@
 const authService = require('../services/authService');
 const validate = require('../middleware/validation');
 const { loginSchema, changePasswordSchema } = require('../validators/schemas');
+const logger = require('../utils/logger');
 
 class AuthController {
   /**
@@ -62,15 +63,45 @@ class AuthController {
   /**
    * Logout
    * POST /api/v1/auth/logout
+   * Handles both JSON requests and sendBeacon blob requests
    */
   async logout(req, res, next) {
     try {
-      const { refreshToken } = req.body;
+      let refreshToken = null;
 
-      if (refreshToken) {
-        await authService.logout(refreshToken);
+      // Try to get refreshToken from body (handles both JSON and parsed blob)
+      if (req.body) {
+        if (typeof req.body === 'string') {
+          // Body is a string (from blob or raw), try to parse it
+          try {
+            const parsed = JSON.parse(req.body);
+            refreshToken = parsed.refreshToken;
+          } catch (e) {
+            // If JSON parsing fails, body might be the token itself
+            logger.debug('Failed to parse logout request body as JSON, trying as direct value');
+            refreshToken = req.body.trim();
+          }
+        } else if (typeof req.body === 'object') {
+          // Body is already parsed as object (normal JSON request)
+          refreshToken = req.body.refreshToken;
+        }
       }
 
+      // If we still don't have refreshToken, try query parameter as fallback
+      if (!refreshToken && req.query?.refreshToken) {
+        refreshToken = req.query.refreshToken;
+      }
+
+      if (refreshToken) {
+        try {
+          await authService.logout(refreshToken);
+        } catch (error) {
+          // Log error but don't fail the request
+          logger.warn('Error during logout service call:', error.message);
+        }
+      }
+
+      // Always return success to prevent client errors
       res.json({
         success: true,
         data: {
@@ -78,7 +109,14 @@ class AuthController {
         }
       });
     } catch (error) {
-      next(error);
+      // Don't throw error for logout - just log it and return success
+      logger.warn('Logout error (non-critical):', error.message);
+      res.json({
+        success: true,
+        data: {
+          message: 'Logged out successfully'
+        }
+      });
     }
   }
 

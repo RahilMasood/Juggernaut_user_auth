@@ -57,6 +57,12 @@ const Firm = sequelize.define('Firm', {
     allowNull: false,
     defaultValue: false,
     comment: 'Sampling tool enabled flag'
+  },
+  no_users: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    comment: 'Maximum number of users allowed for the firm'
   }
 }, {
   tableName: 'firms',
