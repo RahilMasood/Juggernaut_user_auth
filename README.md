@@ -395,6 +395,7 @@ Content-Type: application/json
 - Refresh tokens expire in 7 days
 - Refresh token rotation on use
 - All tokens invalidated on password change
+- **Single Session Enforcement**: Only one active session per user at a time. If a user attempts to log in while already logged in on another system, the new login will be rejected with an error message. Users must log out from the existing session before logging in from a different system.
 
 ### Rate Limiting
 - 100 requests per 15 minutes per IP address

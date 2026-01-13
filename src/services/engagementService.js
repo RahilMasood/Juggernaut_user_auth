@@ -328,40 +328,77 @@ class EngagementService {
 
   /**
    * Remove user from engagement team
+   * Uses EngagementUser model directly to ensure database is updated
    */
   async removeUserFromEngagement(engagementId, userIdToRemove, removedBy) {
     try {
+      // Get engagement
       const engagement = await Engagement.findByPk(engagementId);
 
       if (!engagement) {
         throw new Error('Engagement not found');
       }
 
+      // Get firm_id from engagement's audit client
+      const auditClient = await AuditClient.findByPk(engagement.audit_client_id);
+      if (!auditClient) {
+        throw new Error('Audit client not found for engagement');
+      }
+      const firmId = auditClient.firm_id;
+
       // Check if removing user has access
+      // Only allow engagement_partner or engagement_manager to remove users
       const hasAccess = await this.checkUserAccess(engagementId, removedBy);
       
       if (!hasAccess) {
         throw new Error('Access denied to this engagement');
       }
 
-      // Cannot remove engagement creator
-      if (userIdToRemove === engagement.created_by) {
-        throw new Error('Cannot remove engagement creator');
+      // Additional check: verify user has partner or manager role
+      const currentUserMember = await EngagementUser.findOne({
+        where: {
+          engagement_id: engagementId,
+          user_id: removedBy
+        }
+      });
+
+      if (currentUserMember && 
+          currentUserMember.role !== 'engagement_partner' && 
+          currentUserMember.role !== 'engagement_manager') {
+        throw new Error('Only engagement partners and managers can remove users');
       }
 
+      // Verify user to remove exists
       const userToRemove = await User.findByPk(userIdToRemove);
       
       if (!userToRemove) {
         throw new Error('User to remove not found');
       }
 
-      // Remove user from engagement
-      await engagement.removeTeamMember(userToRemove);
+      // Check if user is in engagement
+      const engagementUser = await EngagementUser.findOne({
+        where: {
+          engagement_id: engagementId,
+          user_id: userIdToRemove
+        }
+      });
+
+      if (!engagementUser) {
+        throw new Error('User is not a member of this engagement');
+      }
+
+      // Remove user from engagement by deleting EngagementUser record directly from database
+      await EngagementUser.destroy({
+        where: {
+          engagement_id: engagementId,
+          user_id: userIdToRemove
+        }
+      });
 
       // Log user removal
       await authService.logAuditEvent(
         removedBy,
-        engagement.firm_id,
+        firmId,
         'REMOVE_USER_FROM_ENGAGEMENT',
         'ENGAGEMENT',
         engagement.id,

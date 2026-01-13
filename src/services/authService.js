@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { Op } = require('sequelize');
 const authConfig = require('../config/auth');
 const { User, RefreshToken, AuditLog } = require('../models');
 const { generatePassword } = require('../utils/passwordGenerator');
@@ -45,6 +46,35 @@ class AuthService {
         await this.logAuditEvent(user.id, user.firm_id, 'LOGIN', 'USER', user.id,
           { reason: 'Invalid password' }, ipAddress, userAgent, 'FAILURE', 'Invalid password');
         throw new Error('Invalid credentials');
+      }
+
+      // Single session enforcement: Check if user is already logged in on another system
+      // If active session exists, prevent new login
+      const activeTokens = await RefreshToken.findAll({
+        where: {
+          user_id: user.id,
+          is_revoked: false,
+          expires_at: {
+            [Op.gt]: new Date() // Not expired
+          }
+        }
+      });
+
+      if (activeTokens.length > 0) {
+        // User is already logged in elsewhere - reject this login attempt
+        await this.logAuditEvent(
+          user.id,
+          user.firm_id,
+          'LOGIN',
+          'USER',
+          user.id,
+          { reason: 'User already logged in on another system', active_sessions: activeTokens.length },
+          ipAddress,
+          userAgent,
+          'FAILURE',
+          'User is already logged in on another system. Please log out from the other system first.'
+        );
+        throw new Error('User is already logged in on another system. Please log out from the other system first.');
       }
 
       // Reset failed login attempts
