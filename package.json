@@ -24,7 +24,8 @@
     "docker:migrate": "docker-compose exec api npm run migrate",
     "docker:seed": "docker-compose exec api npm run seed-admin",
     "docker:init": "docker-compose up -d && sleep 10 && npm run docker:migrate && npm run docker:seed",
-    "generate-secrets": "node scripts/generate-secrets.js"
+    "generate-secrets": "node scripts/generate-secrets.js",
+    "railway:start": "npm run migrate && npm start"
   },
   "keywords": ["audit", "financial", "api", "authentication"],
   "author": "",
