@@ -519,9 +519,17 @@ Logs are output to console in development mode. In production, logs are written 
 
 ## Production Deployment
 
+### Railway Deployment (Recommended)
+
+For detailed step-by-step instructions on deploying to Railway, see:
+- **[Railway Deployment Guide](RAILWAY_DEPLOYMENT_GUIDE.md)** - Complete deployment instructions
+- **[Railway Quick Start](RAILWAY_QUICK_START.md)** - Quick reference guide
+
+### General Production Checklist
+
 1. Set `NODE_ENV=production` in environment variables
-2. Use strong, random secrets for JWT and encryption keys
-3. Configure HTTPS (use reverse proxy like Nginx)
+2. Use strong, random secrets for JWT and encryption keys (use `node scripts/generate-secrets.js`)
+3. Configure HTTPS (Railway provides this automatically)
 4. Set up proper CORS origins
 5. Configure production database with proper credentials
 6. Set up log rotation for production logs
@@ -531,6 +539,8 @@ Logs are output to console in development mode. In production, logs are written 
 
 For detailed information on specific features:
 
+- **[Railway Deployment Guide](RAILWAY_DEPLOYMENT_GUIDE.md)** - Complete Railway deployment instructions
+- **[Railway Quick Start](RAILWAY_QUICK_START.md)** - Quick Railway deployment reference
 - **[Default Password System](docs/DEFAULT_PASSWORD_SYSTEM.md)** - Automatic password generation and credential delivery
 - **[Complete API Guide](COMPLETE_API_TEST_GUIDE.md)** - Full API testing examples
 - **[Getting Started](GETTING_STARTED.md)** - Quick start guide
