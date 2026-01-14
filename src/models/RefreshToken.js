@@ -39,11 +39,13 @@ const RefreshToken = sequelize.define('RefreshToken', {
   }
 }, {
   tableName: 'refresh_tokens',
+  timestamps: true, // Enable created_at and updated_at (default is true, but explicit for clarity)
   indexes: [
     { fields: ['token'], unique: true },
     { fields: ['user_id'] },
     { fields: ['expires_at'] },
-    { fields: ['is_revoked'] }
+    { fields: ['is_revoked'] },
+    { fields: ['updated_at'] } // Index for efficient stale token queries
   ]
 });
 

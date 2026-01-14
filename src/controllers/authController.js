@@ -151,6 +151,7 @@ class AuthController {
   /**
    * Get current user info
    * GET /api/v1/auth/me
+   * Also updates refresh token heartbeat to keep session alive
    */
   async getCurrentUser(req, res, next) {
     try {
@@ -163,6 +164,11 @@ class AuthController {
           }
         });
       }
+
+      // Update token heartbeat (keeps session alive)
+      // This is called by the frontend heartbeat mechanism
+      // If heartbeat stops (force shutdown, crash), token will be auto-revoked
+      await authService.updateTokenHeartbeat(req.user.id);
   
       res.json({
         success: true,

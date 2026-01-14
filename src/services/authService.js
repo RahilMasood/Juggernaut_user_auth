@@ -284,6 +284,75 @@ class AuthService {
       throw new Error('Invalid or expired token');
     }
   }
+
+  /**
+   * Update refresh token heartbeat (last seen timestamp)
+   * Called when user makes authenticated requests to keep session alive
+   * If heartbeat stops (force shutdown, crash), token will be auto-revoked
+   */
+  async updateTokenHeartbeat(userId) {
+    try {
+      // Find the active refresh token for this user
+      const tokenRecord = await RefreshToken.findOne({
+        where: {
+          user_id: userId,
+          is_revoked: false,
+          expires_at: {
+            [Op.gt]: new Date() // Not expired
+          }
+        },
+        order: [['created_at', 'DESC']] // Get the most recent token
+      });
+
+      if (tokenRecord) {
+        // Update the updated_at timestamp (Sequelize handles this automatically on save)
+        // But we'll explicitly touch it to ensure it updates
+        await tokenRecord.save();
+        logger.debug(`Token heartbeat updated for user ${userId}`);
+      }
+    } catch (error) {
+      logger.error('Error updating token heartbeat:', error);
+      // Don't throw - heartbeat failure shouldn't break the request
+    }
+  }
+
+  /**
+   * Auto-revoke stale tokens (tokens that haven't been updated in 5+ minutes)
+   * This handles cases where app crashes or system force shuts down
+   * Should be called periodically (e.g., every 2 minutes)
+   */
+  async revokeStaleTokens() {
+    try {
+      const STALE_THRESHOLD_MINUTES = 5;
+      const staleThreshold = new Date();
+      staleThreshold.setMinutes(staleThreshold.getMinutes() - STALE_THRESHOLD_MINUTES);
+
+      // Sequelize automatically maps updatedAt (model) to updated_at (database) due to underscored: true
+      const result = await RefreshToken.update(
+        {
+          is_revoked: true,
+          revoked_at: new Date()
+        },
+        {
+          where: {
+            is_revoked: false,
+            expires_at: {
+              [Op.gt]: new Date() // Not expired
+            },
+            updatedAt: {
+              [Op.lt]: staleThreshold // Not updated in last 5 minutes
+            }
+          }
+        }
+      );
+
+      if (result[0] > 0) {
+        logger.info(`Auto-revoked ${result[0]} stale refresh token(s)`);
+      }
+    } catch (error) {
+      logger.error('Error revoking stale tokens:', error);
+    }
+  }
 }
 
 module.exports = new AuthService();
