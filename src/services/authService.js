@@ -368,7 +368,7 @@ class AuthService {
       const staleThreshold = new Date();
       staleThreshold.setMinutes(staleThreshold.getMinutes() - STALE_THRESHOLD_MINUTES);
 
-      // Sequelize automatically maps updatedAt (model) to updated_at (database) due to underscored: true
+      // Use updated_at (snake_case) to match the database column name
       // Revoke stale tokens for all application types
       const result = await RefreshToken.update(
         {
@@ -381,7 +381,7 @@ class AuthService {
             expires_at: {
               [Op.gt]: new Date() // Not expired
             },
-            updatedAt: {
+            updated_at: {
               [Op.lt]: staleThreshold // Not updated in last 5 minutes
             }
           }
