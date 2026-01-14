@@ -66,6 +66,12 @@ const User = sequelize.define('User', {
   },
   password_changed_at: {
     type: DataTypes.DATE
+  },
+  allowed_tools: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: null,
+    comment: 'Array of tools user has access to: ["main", "confirmation", "sampling", "clientonboard"]'
   }
 }, {
   tableName: 'users',

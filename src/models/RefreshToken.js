@@ -36,6 +36,12 @@ const RefreshToken = sequelize.define('RefreshToken', {
   },
   user_agent: {
     type: DataTypes.STRING
+  },
+  application_type: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    defaultValue: 'main',
+    comment: 'Type of application/tool: main, confirmation, sampling, clientonboard'
   }
 }, {
   tableName: 'refresh_tokens',
@@ -45,7 +51,9 @@ const RefreshToken = sequelize.define('RefreshToken', {
     { fields: ['user_id'] },
     { fields: ['expires_at'] },
     { fields: ['is_revoked'] },
-    { fields: ['updated_at'] } // Index for efficient stale token queries
+    { fields: ['updated_at'] }, // Index for efficient stale token queries
+    { fields: ['application_type'] }, // Index for efficient queries by application type
+    { fields: ['user_id', 'application_type', 'is_revoked'] } // Composite index for session checks
   ]
 });
 

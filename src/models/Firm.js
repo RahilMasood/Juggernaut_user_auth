@@ -46,17 +46,24 @@ const Firm = sequelize.define('Firm', {
     allowNull: true,
     comment: 'Site path (e.g., /sites/TestCloud)'
   },
-  confirmation_tool: {
-    type: DataTypes.BOOLEAN,
+  confirmation_no: {
+    type: DataTypes.INTEGER,
     allowNull: false,
-    defaultValue: false,
-    comment: 'Confirmation tool enabled flag'
+    defaultValue: 0,
+    comment: 'Maximum number of users allowed for confirmation tool (0 or -1 means tool not available)'
   },
-  sampling_tool: {
-    type: DataTypes.BOOLEAN,
+  sampling_no: {
+    type: DataTypes.INTEGER,
     allowNull: false,
-    defaultValue: false,
-    comment: 'Sampling tool enabled flag'
+    defaultValue: 0,
+    comment: 'Maximum number of users allowed for sampling tool (0 or -1 means tool not available)'
+  },
+  clientOnboard_no: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    field: 'client_onboard_no', // Explicitly map to snake_case column name for Sequelize
+    comment: 'Maximum number of users allowed for client onboarding tool (0 or -1 means tool not available)'
   },
   no_users: {
     type: DataTypes.INTEGER,

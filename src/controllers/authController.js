@@ -10,11 +10,14 @@ class AuthController {
    */
   async login(req, res, next) {
     try {
-      const { email, password } = req.body;
+      const { email, password, application_type } = req.body;
       const ipAddress = req.ip;
       const userAgent = req.get('user-agent');
+      
+      // Default to 'main' if not specified
+      const appType = application_type || 'main';
 
-      const result = await authService.login(email, password, ipAddress, userAgent);
+      const result = await authService.login(email, password, ipAddress, userAgent, appType);
 
       res.json({
         success: true,
@@ -165,10 +168,13 @@ class AuthController {
         });
       }
 
+      // Get application_type from query param, header, or default to 'main'
+      const applicationType = req.query.application_type || req.get('x-application-type') || 'main';
+
       // Update token heartbeat (keeps session alive)
       // This is called by the frontend heartbeat mechanism
       // If heartbeat stops (force shutdown, crash), token will be auto-revoked
-      await authService.updateTokenHeartbeat(req.user.id);
+      await authService.updateTokenHeartbeat(req.user.id, applicationType);
   
       res.json({
         success: true,

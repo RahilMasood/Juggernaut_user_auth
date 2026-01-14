@@ -13,7 +13,8 @@ const passwordPattern = Joi.string()
 const loginSchema = {
   body: Joi.object({
     email: Joi.string().email().required(),
-    password: Joi.string().required()
+    password: Joi.string().required(),
+    application_type: Joi.string().valid('main', 'confirmation', 'sampling', 'clientonboard').optional()
   })
 };
 
@@ -248,7 +249,8 @@ const adminCreateUserSchema = {
     email: Joi.string().email().required(),
     password: passwordPattern.required(),
     type: Joi.string().valid('partner', 'manager', 'associate', 'article').required(),
-    payroll_id: Joi.string().optional().allow(null, '')
+    payroll_id: Joi.string().optional().allow(null, ''),
+    allowed_tools: Joi.array().items(Joi.string().valid('main', 'confirmation', 'sampling', 'clientonboard')).optional().allow(null)
   })
 };
 
@@ -262,7 +264,8 @@ const adminUpdateUserSchema = {
     email: Joi.string().email().optional(),
     password: passwordPattern.optional(),
     type: Joi.string().valid('partner', 'manager', 'associate', 'article').optional(),
-    payroll_id: Joi.string().optional().allow(null, '')
+    payroll_id: Joi.string().optional().allow(null, ''),
+    allowed_tools: Joi.array().items(Joi.string().valid('main', 'confirmation', 'sampling', 'clientonboard')).optional().allow(null)
   })
 };
 

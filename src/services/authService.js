@@ -8,8 +8,13 @@ const logger = require('../utils/logger');
 class AuthService {
   /**
    * Authenticate user and generate tokens
+   * @param {string} email - User email
+   * @param {string} password - User password
+   * @param {string} ipAddress - IP address
+   * @param {string} userAgent - User agent
+   * @param {string} applicationType - Type of application: 'main', 'confirmation', 'sampling', 'clientonboard'
    */
-  async login(email, password, ipAddress, userAgent) {
+  async login(email, password, ipAddress, userAgent, applicationType = 'main') {
     try {
       // Find user
       const user = await User.findOne({ 
@@ -48,33 +53,61 @@ class AuthService {
         throw new Error('Invalid credentials');
       }
 
-      // Single session enforcement: Check if user is already logged in on another system
-      // If active session exists, prevent new login
-      const activeTokens = await RefreshToken.findAll({
-        where: {
-          user_id: user.id,
-          is_revoked: false,
-          expires_at: {
-            [Op.gt]: new Date() // Not expired
+      // Tool-based session enforcement: Check if user is already logged in for THIS SPECIFIC TOOL
+      // ClientOnboard always allows login (skip session check)
+      if (applicationType !== 'clientonboard') {
+        const activeTokens = await RefreshToken.findAll({
+          where: {
+            user_id: user.id,
+            application_type: applicationType,
+            is_revoked: false,
+            expires_at: {
+              [Op.gt]: new Date() // Not expired
+            }
           }
-        }
-      });
+        });
 
-      if (activeTokens.length > 0) {
-        // User is already logged in elsewhere - reject this login attempt
-        await this.logAuditEvent(
-          user.id,
-          user.firm_id,
-          'LOGIN',
-          'USER',
-          user.id,
-          { reason: 'User already logged in on another system', active_sessions: activeTokens.length },
-          ipAddress,
-          userAgent,
-          'FAILURE',
-          'User is already logged in on another system. Please log out from the other system first.'
-        );
-        throw new Error('User is already logged in on another system. Please log out from the other system first.');
+        if (activeTokens.length > 0) {
+          // User is already logged in for this specific tool on another system - reject this login attempt
+          await this.logAuditEvent(
+            user.id,
+            user.firm_id,
+            'LOGIN',
+            'USER',
+            user.id,
+            { 
+              reason: `User already logged in on another system for ${applicationType}`, 
+              active_sessions: activeTokens.length,
+              application_type: applicationType
+            },
+            ipAddress,
+            userAgent,
+            'FAILURE',
+            `User is already logged in on another system for ${applicationType}. Please log out from the other system first.`
+          );
+          throw new Error(`User is already logged in on another system for ${applicationType}. Please log out from the other system first.`);
+        }
+      }
+
+      // Check if user has access to this tool (if not clientonboard)
+      if (applicationType !== 'clientonboard' && applicationType !== 'main') {
+        // Check user's allowed_tools
+        const allowedTools = user.allowed_tools || [];
+        if (!allowedTools.includes(applicationType) && !allowedTools.includes('main')) {
+          await this.logAuditEvent(
+            user.id,
+            user.firm_id,
+            'LOGIN',
+            'USER',
+            user.id,
+            { reason: `User does not have access to ${applicationType}` },
+            ipAddress,
+            userAgent,
+            'FAILURE',
+            `User does not have access to ${applicationType}`
+          );
+          throw new Error(`User does not have access to ${applicationType}`);
+        }
       }
 
       // Reset failed login attempts
@@ -82,7 +115,7 @@ class AuthService {
 
       // Generate tokens
       const accessToken = this.generateAccessToken(user);
-      const refreshToken = await this.generateRefreshToken(user, ipAddress, userAgent);
+      const refreshToken = await this.generateRefreshToken(user, ipAddress, userAgent, applicationType);
 
       // Log successful login
       await this.logAuditEvent(user.id, user.firm_id, 'LOGIN', 'USER', user.id,
@@ -118,8 +151,12 @@ class AuthService {
 
   /**
    * Generate refresh token and store in database
+   * @param {Object} user - User object
+   * @param {string} ipAddress - IP address
+   * @param {string} userAgent - User agent
+   * @param {string} applicationType - Type of application: 'main', 'confirmation', 'sampling', 'clientonboard'
    */
-  async generateRefreshToken(user, ipAddress, userAgent) {
+  async generateRefreshToken(user, ipAddress, userAgent, applicationType = 'main') {
     const token = jwt.sign(
       { userId: user.id },
       authConfig.jwt.refreshSecret,
@@ -136,7 +173,8 @@ class AuthService {
       token,
       expires_at: expiresAt,
       ip_address: ipAddress,
-      user_agent: userAgent
+      user_agent: userAgent,
+      application_type: applicationType
     });
 
     return token;
@@ -289,13 +327,16 @@ class AuthService {
    * Update refresh token heartbeat (last seen timestamp)
    * Called when user makes authenticated requests to keep session alive
    * If heartbeat stops (force shutdown, crash), token will be auto-revoked
+   * @param {string} userId - User ID
+   * @param {string} applicationType - Type of application (optional, defaults to 'main')
    */
-  async updateTokenHeartbeat(userId) {
+  async updateTokenHeartbeat(userId, applicationType = 'main') {
     try {
-      // Find the active refresh token for this user
+      // Find the active refresh token for this user and application type
       const tokenRecord = await RefreshToken.findOne({
         where: {
           user_id: userId,
+          application_type: applicationType,
           is_revoked: false,
           expires_at: {
             [Op.gt]: new Date() // Not expired
@@ -328,6 +369,7 @@ class AuthService {
       staleThreshold.setMinutes(staleThreshold.getMinutes() - STALE_THRESHOLD_MINUTES);
 
       // Sequelize automatically maps updatedAt (model) to updated_at (database) due to underscored: true
+      // Revoke stale tokens for all application types
       const result = await RefreshToken.update(
         {
           is_revoked: true,
