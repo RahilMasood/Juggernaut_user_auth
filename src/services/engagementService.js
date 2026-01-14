@@ -67,6 +67,11 @@ class EngagementService {
           { association: 'firm', attributes: ['id', 'name'] },
           { association: 'creator', attributes: ['id', 'email', 'first_name', 'last_name'] },
           {
+            model: AuditClient,
+            as: 'auditClient',
+            attributes: ['id', 'client_name', 'status', 'firm_id']
+          },
+          {
             model: User,
             as: 'teamMembers',
             attributes: ['id', 'user_name', 'email', 'type'],
@@ -77,6 +82,16 @@ class EngagementService {
 
       if (!engagement) {
         throw new Error('Engagement not found');
+      }
+
+      // Check if this is a default engagement - don't allow access to default/placeholder engagements
+      if (engagement.is_default === true) {
+        throw new Error('Engagement not available - default engagement is not accessible');
+      }
+
+      // Check if client status is Active - don't allow access to engagements with Pending clients
+      if (engagement.auditClient && engagement.auditClient.status !== 'Active') {
+        throw new Error('Engagement not available - client status is not Active');
       }
 
       // Check if user has access to this engagement
@@ -109,13 +124,19 @@ class EngagementService {
       }
 
       // Build where clause for engagements
-      const engagementWhere = {};
+      // Exclude default engagements created during client onboarding
+      const engagementWhere = {
+        is_default: false // Don't display default/placeholder engagements
+      };
       if (filters.status) {
         engagementWhere.status = filters.status;
       }
 
       // Build where clause for audit client (if filtering by client_name)
-      const clientWhere = {};
+      // Only show engagements for clients with status 'Active'
+      const clientWhere = {
+        status: 'Active' // Only display engagements for Active clients
+      };
       if (filters.client_name) {
         clientWhere.client_name = { [Op.iLike]: `%${filters.client_name}%` };
       }
@@ -137,7 +158,8 @@ class EngagementService {
             through: {
               where: {
                 user_id: userId
-              }
+              },
+              attributes: ['role'] // Include role from EngagementUser junction table
             },
             attributes: ['id', 'user_name', 'email', 'type'],
             required: true // Only get engagements where user is a team member
@@ -153,6 +175,15 @@ class EngagementService {
       // Format the response to include client_name and engagement_name
       const formattedEngagements = engagements.map(engagement => {
         const engagementData = engagement.toJSON();
+        // Format teamMembers to include role from through table
+        const formattedTeamMembers = (engagementData.teamMembers || []).map(member => ({
+          id: member.id,
+          user_name: member.user_name,
+          email: member.email,
+          type: member.type,
+          role: member.EngagementUser?.role || null // Extract role from through table
+        }));
+        
         return {
           id: engagementData.id,
           audit_client_id: engagementData.audit_client_id,
@@ -160,7 +191,7 @@ class EngagementService {
           is_default: engagementData.is_default,
           engagement_name: engagementData.engagement_name,
           client_name: engagementData.auditClient?.client_name,
-          teamMembers: engagementData.teamMembers || [],
+          teamMembers: formattedTeamMembers,
           created_at: engagementData.created_at,
           updated_at: engagementData.updated_at
         };
