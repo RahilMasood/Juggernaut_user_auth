@@ -31,7 +31,11 @@ app.use(helmet());
 // CORS configuration
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? [process.env.CLIENT_PORTAL_URL, process.env.CONFIRMING_PARTY_PORTAL_URL]
+    ? [
+        process.env.CLIENT_PORTAL_URL, 
+        process.env.CONFIRMING_PARTY_PORTAL_URL,
+        process.env.CLIENT_ONBOARD_URL  // ClientOnboard service URL
+      ]
     : '*',
   credentials: true
 };
