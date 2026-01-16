@@ -2,10 +2,10 @@ const Joi = require('joi');
 
 // Password validation pattern
 const passwordPattern = Joi.string()
-  .min(12)
+  .min(8)
   .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;:,.<>?])/)
   .messages({
-    'string.min': 'Password must be at least 12 characters long',
+    'string.min': 'Password must be at least 8 characters long',
     'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
   });
 
