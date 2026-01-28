@@ -10,7 +10,6 @@ const Permission = sequelize.define('Permission', {
   name: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true,
     comment: 'Permission identifier (e.g., create_engagement, access_confirmation_tool)'
   },
   description: {

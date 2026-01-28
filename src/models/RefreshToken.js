@@ -17,8 +17,7 @@ const RefreshToken = sequelize.define('RefreshToken', {
   },
   token: {
     type: DataTypes.STRING(500),
-    allowNull: false,
-    unique: true
+    allowNull: false
   },
   expires_at: {
     type: DataTypes.DATE,

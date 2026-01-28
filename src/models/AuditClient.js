@@ -22,7 +22,6 @@ const AuditClient = sequelize.define('AuditClient', {
   client_name: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true,
     comment: 'Name of the audit client (must be unique)'
   },
   client_id: {

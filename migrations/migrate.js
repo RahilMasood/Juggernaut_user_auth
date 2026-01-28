@@ -2,6 +2,25 @@ const { sequelize, Sequelize } = require('../src/config/database');
 const logger = require('../src/utils/logger');
 
 /**
+ * Helper function to check if a column is already an enum type
+ */
+async function isColumnEnum(tableName, columnName) {
+  const result = await sequelize.query(`
+    SELECT 
+      c.udt_name as current_type
+    FROM information_schema.columns c
+    WHERE c.table_name = $1
+      AND c.column_name = $2
+      AND c.table_schema = 'public'
+  `, {
+    bind: [tableName, columnName],
+    type: Sequelize.QueryTypes.SELECT
+  });
+  
+  return result && result.length > 0 && result[0].current_type && result[0].current_type.includes('enum');
+}
+
+/**
  * Main migration script
  * Runs all SQL migrations and syncs Sequelize models
  */
@@ -71,11 +90,90 @@ async function migrate() {
     
     const shouldSkipUserSync = enumCheck && enumCheck.length > 0;
     
-    // Sync all models with database (alter: true will update schema)
-    await sequelize.sync({ alter: true });
+    // Check if enum columns already exist (to skip syncing models with enums)
+    const shouldSkipAuditClientSync = await isColumnEnum('audit_clients', 'status');
+    const shouldSkipEngagementSync = await isColumnEnum('engagements', 'status');
+    const shouldSkipEngagementUserSync = await isColumnEnum('engagement_users', 'role');
+    const shouldSkipAuditLogSync = await isColumnEnum('audit_logs', 'status');
+    const shouldSkipClientSync = await isColumnEnum('clients', 'status');
+    const shouldSkipConfirmationRequestSync = await isColumnEnum('confirmation_requests', 'status') || await isColumnEnum('confirmation_requests', 'party_type');
+    const shouldSkipIndependenceDeclarationSync = await isColumnEnum('independence_declarations', 'status');
     
-    if (shouldSkipUserSync) {
-      logger.info('Skipped User model sync (type column already correct)');
+    // Sync models individually, skipping User, AuditClient, Engagement, and EngagementUser if enums already exist
+    const { Firm, AuditClient, Engagement, EngagementUser, RefreshToken, AuditLog, Permission, Role, Client, ConfirmationRequest, IndependenceDeclaration } = require('../src/models');
+    
+    // Sync all models except User, AuditClient, Engagement, and EngagementUser (if enums exist)
+    await Firm.sync({ alter: true });
+    
+    if (!shouldSkipAuditClientSync) {
+      await AuditClient.sync({ alter: true });
+      logger.info('AuditClient model synced');
+    } else {
+      logger.info('Skipped AuditClient model sync (status column already an enum)');
+    }
+    
+    if (!shouldSkipEngagementSync) {
+      await Engagement.sync({ alter: true });
+      logger.info('Engagement model synced');
+    } else {
+      logger.info('Skipped Engagement model sync (status column already an enum)');
+    }
+    
+    if (!shouldSkipEngagementUserSync) {
+      await EngagementUser.sync({ alter: true });
+      logger.info('EngagementUser model synced');
+    } else {
+      logger.info('Skipped EngagementUser model sync (role column already an enum)');
+    }
+    
+    await RefreshToken.sync({ alter: true });
+    
+    if (!shouldSkipAuditLogSync) {
+      await AuditLog.sync({ alter: true });
+      logger.info('AuditLog model synced');
+    } else {
+      logger.info('Skipped AuditLog model sync (status column already an enum)');
+    }
+    
+    await Permission.sync({ alter: true });
+    await Role.sync({ alter: true });
+    
+    if (!shouldSkipClientSync) {
+      await Client.sync({ alter: true });
+      logger.info('Client model synced');
+    } else {
+      logger.info('Skipped Client model sync (status column already an enum)');
+    }
+    
+    if (!shouldSkipConfirmationRequestSync) {
+      await ConfirmationRequest.sync({ alter: true });
+      logger.info('ConfirmationRequest model synced');
+    } else {
+      logger.info('Skipped ConfirmationRequest model sync (enum columns already exist)');
+    }
+    
+    if (!shouldSkipIndependenceDeclarationSync) {
+      await IndependenceDeclaration.sync({ alter: true });
+      logger.info('IndependenceDeclaration model synced');
+    } else {
+      logger.info('Skipped IndependenceDeclaration model sync (status column already an enum)');
+    }
+    
+    // Only sync User if enum doesn't exist yet
+    if (!shouldSkipUserSync) {
+      const { User } = require('../src/models');
+      await User.sync({ alter: true });
+      logger.info('User model synced');
+    } else {
+      logger.info('Skipped User model sync (type column already an enum)');
+      // Still ensure comment is added if missing
+      try {
+        await sequelize.query(`
+          COMMENT ON COLUMN users.type IS 'Organizational seniority level'
+        `);
+      } catch (error) {
+        // Ignore if comment already exists
+      }
     }
     
     logger.info('Database migration completed successfully');

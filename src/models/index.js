@@ -16,7 +16,8 @@ const Client = require('./Client');
 const ConfirmationRequest = require('./ConfirmationRequest');
 const IndependenceDeclaration = require('./IndependenceDeclaration');
 
-module.exports = {
+// Define all models
+const models = {
   User,
   AuditClient,
   Engagement,
@@ -30,4 +31,11 @@ module.exports = {
   ConfirmationRequest,
   IndependenceDeclaration
 };
+
+// Initialize associations if they exist
+if (typeof Engagement.associate === 'function') {
+  Engagement.associate(models);
+}
+
+module.exports = models;
 

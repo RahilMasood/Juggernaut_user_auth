@@ -60,5 +60,22 @@ const Engagement = sequelize.define('Engagement', {
   ]
 });
 
+// Define associations
+Engagement.associate = function(models) {
+  // Engagement belongs to AuditClient
+  Engagement.belongsTo(models.AuditClient, {
+    foreignKey: 'audit_client_id',
+    as: 'auditClient'
+  });
+
+  // Engagement has many Users through EngagementUser
+  Engagement.belongsToMany(models.User, {
+    through: models.EngagementUser,
+    foreignKey: 'engagement_id',
+    otherKey: 'user_id',
+    as: 'teamMembers'
+  });
+};
+
 module.exports = Engagement;
 

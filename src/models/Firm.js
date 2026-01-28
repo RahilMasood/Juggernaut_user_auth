@@ -14,7 +14,6 @@ const Firm = sequelize.define('Firm', {
   tenant_id: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true,
     comment: 'Tenant identifier for the firm'
   },
   client_id: {
@@ -30,7 +29,6 @@ const Firm = sequelize.define('Firm', {
   admin_id: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true,
     comment: 'Admin login ID for the firm'
   },
   admin_password: {
