@@ -155,12 +155,13 @@ class EngagementService {
             as: 'teamMembers',
             through: {
               where: {
-                user_id: userId
+                user_id: userId,
+                confirmation_tool: true // Only include engagements where user has confirmation_tool access
               },
-              attributes: ['role'] // Include role from EngagementUser junction table
+              attributes: ['role', 'confirmation_tool'] // Include role and confirmation_tool from EngagementUser junction table
             },
             attributes: ['id', 'user_name', 'email', 'type'],
-            required: true // Only get engagements where user is a team member
+            required: true // Only get engagements where user is a team member with confirmation_tool access
           }
         ],
         attributes: ['id', 'audit_client_id', 'status', 'is_default', 'engagement_name', 'created_at', 'updated_at'],
