@@ -208,15 +208,17 @@ class EngagementController {
 
       const users = await engagementService.getUsersAvailableForConfirmation(id);
 
-      res.json({
+      return res.json({
         success: true,
         data: { users }
       });
     } catch (error) {
-      return res.status(error.message.includes('Access denied') ? 403 : 404).json({
+      const logger = require('../utils/logger');
+      logger.error('Error in getUsersAvailableForConfirmation controller:', error);
+      return res.status(error.message.includes('Access denied') ? 403 : (error.message.includes('not found') ? 404 : 500)).json({
         success: false,
         error: {
-          code: error.message.includes('Access denied') ? 'FORBIDDEN' : 'NOT_FOUND',
+          code: error.message.includes('Access denied') ? 'FORBIDDEN' : (error.message.includes('not found') ? 'NOT_FOUND' : 'INTERNAL_ERROR'),
           message: error.message
         }
       });

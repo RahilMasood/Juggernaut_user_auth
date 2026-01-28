@@ -533,6 +533,8 @@ class EngagementService {
       const { sequelize } = require('../config/database');
       const AuditClient = require('../models/AuditClient');
 
+      logger.info(`Getting users available for confirmation for engagement ${engagementId}`);
+
       // Get firm_id from engagement
       const engagement = await Engagement.findByPk(engagementId, {
         include: [{
@@ -543,10 +545,12 @@ class EngagementService {
       });
 
       if (!engagement || !engagement.auditClient) {
+        logger.error(`Engagement ${engagementId} not found or does not have associated audit client`);
         throw new Error('Engagement not found or does not have associated audit client');
       }
 
       const firmId = engagement.auditClient.firm_id;
+      logger.info(`Found firm_id ${firmId} for engagement ${engagementId}`);
 
       // Query users from the same firm who have "confirmation" in allowed_tools
       const query = `
@@ -566,10 +570,16 @@ class EngagementService {
         ORDER BY u.user_name ASC
       `;
 
+      logger.info(`Executing query for firm_id ${firmId}`);
       const users = await sequelize.query(query, {
         replacements: { firmId },
         type: sequelize.QueryTypes.SELECT
       });
+
+      logger.info(`Found ${users.length} users with confirmation tool access for firm ${firmId}`);
+      if (users.length > 0) {
+        logger.info(`Users: ${users.map(u => `${u.user_name} (${u.email})`).join(', ')}`);
+      }
 
       return users;
     } catch (error) {
