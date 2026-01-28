@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
+const bcrypt = require('bcrypt');
 
 /**
  * Firm Model
@@ -79,6 +80,32 @@ const Firm = sequelize.define('Firm', {
     { fields: ['admin_id'], unique: true }
   ]
 });
+
+// Instance methods
+Firm.prototype.compareAdminPassword = async function(password) {
+  return bcrypt.compare(password, this.admin_password);
+};
+
+Firm.prototype.toJSON = function() {
+  const values = { ...this.get() };
+  delete values.admin_password;
+  return values;
+};
+
+// Define associations
+Firm.associate = function(models) {
+  // Firm has many Users
+  Firm.hasMany(models.User, {
+    foreignKey: 'firm_id',
+    as: 'users'
+  });
+  
+  // Firm has many AuditClients
+  Firm.hasMany(models.AuditClient, {
+    foreignKey: 'firm_id',
+    as: 'auditClients'
+  });
+};
 
 module.exports = Firm;
 

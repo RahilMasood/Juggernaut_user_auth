@@ -130,5 +130,14 @@ User.prototype.toJSON = function() {
   return values;
 };
 
+// Define associations
+User.associate = function(models) {
+  // User belongs to Firm
+  User.belongsTo(models.Firm, {
+    foreignKey: 'firm_id',
+    as: 'firm'
+  });
+};
+
 module.exports = User;
 

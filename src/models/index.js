@@ -37,5 +37,13 @@ if (typeof Engagement.associate === 'function') {
   Engagement.associate(models);
 }
 
+if (typeof User.associate === 'function') {
+  User.associate(models);
+}
+
+if (typeof Firm.associate === 'function') {
+  Firm.associate(models);
+}
+
 module.exports = models;
 

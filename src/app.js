@@ -28,6 +28,10 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
+// Trust proxy (required for Railway deployment)
+// Railway uses proxies and sets X-Forwarded-For headers
+app.set('trust proxy', true);
+
 // Security middleware
 app.use(helmet());
 
