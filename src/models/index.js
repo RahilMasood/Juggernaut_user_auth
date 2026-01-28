@@ -1,0 +1,33 @@
+/**
+ * Models Index
+ * Exports all Sequelize models for easy importing
+ */
+
+const User = require('./User');
+const AuditClient = require('./AuditClient');
+const Engagement = require('./Engagement');
+const EngagementUser = require('./EngagementUser');
+const Firm = require('./Firm');
+const RefreshToken = require('./RefreshToken');
+const AuditLog = require('./AuditLog');
+const Permission = require('./Permission');
+const Role = require('./Role');
+const Client = require('./Client');
+const ConfirmationRequest = require('./ConfirmationRequest');
+const IndependenceDeclaration = require('./IndependenceDeclaration');
+
+module.exports = {
+  User,
+  AuditClient,
+  Engagement,
+  EngagementUser,
+  Firm,
+  RefreshToken,
+  AuditLog,
+  Permission,
+  Role,
+  Client,
+  ConfirmationRequest,
+  IndependenceDeclaration
+};
+
