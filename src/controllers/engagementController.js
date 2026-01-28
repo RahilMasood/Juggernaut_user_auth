@@ -193,6 +193,65 @@ class EngagementController {
       });
     }
   }
+
+  /**
+   * Get users with confirmation tool access for engagement's firm
+   * GET /api/v1/engagements/:id/users/available-for-confirmation
+   */
+  async getUsersAvailableForConfirmation(req, res, next) {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+
+      // Check if user has access to engagement
+      await engagementService.getEngagement(id, userId);
+
+      const users = await engagementService.getUsersAvailableForConfirmation(id);
+
+      res.json({
+        success: true,
+        data: { users }
+      });
+    } catch (error) {
+      return res.status(error.message.includes('Access denied') ? 403 : 404).json({
+        success: false,
+        error: {
+          code: error.message.includes('Access denied') ? 'FORBIDDEN' : 'NOT_FOUND',
+          message: error.message
+        }
+      });
+    }
+  }
+
+  /**
+   * Update engagement user (e.g., set confirmation_tool or sampling_tool)
+   * PATCH /api/v1/engagements/:id/users/:userId
+   */
+  async updateEngagementUser(req, res, next) {
+    try {
+      const { id, userId } = req.params;
+      const updateData = req.body;
+      const updatedBy = req.user.id;
+
+      // Check if user has access to engagement
+      await engagementService.getEngagement(id, updatedBy);
+
+      const updated = await engagementService.updateEngagementUser(id, userId, updateData);
+
+      res.json({
+        success: true,
+        data: { engagementUser: updated }
+      });
+    } catch (error) {
+      return res.status(error.message.includes('Access denied') ? 403 : error.message.includes('not found') ? 404 : 400).json({
+        success: false,
+        error: {
+          code: error.message.includes('Access denied') ? 'FORBIDDEN' : error.message.includes('not found') ? 'NOT_FOUND' : 'VALIDATION_ERROR',
+          message: error.message
+        }
+      });
+    }
+  }
 }
 
 module.exports = new EngagementController();

@@ -31,11 +31,17 @@ router.patch('/:id', validate(updateEngagementSchema), engagementController.upda
 // Get engagement team
 router.get('/:id/users', validate(uuidParamSchema), engagementController.getEngagementTeam.bind(engagementController));
 
+// Get users available for confirmation tool (users with confirmation in allowed_tools)
+router.get('/:id/users/available-for-confirmation', validate(uuidParamSchema), engagementController.getUsersAvailableForConfirmation.bind(engagementController));
+
 // Add user to engagement
 router.post('/:id/users', validate(addUserToEngagementSchema), engagementController.addUser.bind(engagementController));
 
 // Remove user from engagement
 router.delete('/:id/users/:userId', engagementController.removeUser.bind(engagementController));
+
+// Update engagement user (e.g., set confirmation_tool or sampling_tool)
+router.patch('/:id/users/:userId', engagementController.updateEngagementUser.bind(engagementController));
 
 // Confirmation routes for specific engagement
 const confirmationController = require('../controllers/confirmationController');

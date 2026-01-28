@@ -38,6 +38,18 @@ const EngagementUser = sequelize.define('EngagementUser', {
     ),
     allowNull: false,
     comment: 'Engagement-specific role for this user'
+  },
+  confirmation_tool: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false,
+    comment: 'Whether user has access to confirmation tool for this engagement'
+  },
+  sampling_tool: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false,
+    comment: 'Whether user has access to sampling tool for this engagement'
   }
 }, {
   tableName: 'engagement_users',

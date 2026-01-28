@@ -332,7 +332,9 @@ class EngagementService {
       const engagementUser = await EngagementUser.create({
         engagement_id: engagementId,
         user_id: userIdToAdd,
-        role: role
+        role: role,
+        confirmation_tool: false, // Default false, will be set by confirmation tool when user is added
+        sampling_tool: false // Default false, will be set by sampling tool when user is added
       });
 
       // Log user addition
@@ -518,6 +520,102 @@ class EngagementService {
     } catch (error) {
       logger.error('Check user access error:', error);
       return false;
+    }
+  }
+
+  /**
+   * Get users with confirmation tool access for engagement's firm
+   * Returns users from the same firm who have "confirmation" in their allowed_tools
+   */
+  async getUsersAvailableForConfirmation(engagementId) {
+    try {
+      const { Op } = require('sequelize');
+      const { sequelize } = require('../config/database');
+      const AuditClient = require('../models/AuditClient');
+
+      // Get firm_id from engagement
+      const engagement = await Engagement.findByPk(engagementId, {
+        include: [{
+          model: AuditClient,
+          as: 'auditClient',
+          attributes: ['firm_id']
+        }]
+      });
+
+      if (!engagement || !engagement.auditClient) {
+        throw new Error('Engagement not found or does not have associated audit client');
+      }
+
+      const firmId = engagement.auditClient.firm_id;
+
+      // Query users from the same firm who have "confirmation" in allowed_tools
+      const query = `
+        SELECT 
+          u.id,
+          u.user_name,
+          u.email,
+          u.designation,
+          u.type,
+          u.is_active,
+          u.allowed_tools
+        FROM users u
+        WHERE u.firm_id = :firmId
+          AND u.is_active = true
+          AND u.allowed_tools IS NOT NULL
+          AND u.allowed_tools::jsonb @> '["confirmation"]'::jsonb
+        ORDER BY u.user_name ASC
+      `;
+
+      const users = await sequelize.query(query, {
+        replacements: { firmId },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      return users;
+    } catch (error) {
+      logger.error('Get users available for confirmation error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update engagement user (e.g., set confirmation_tool or sampling_tool)
+   */
+  async updateEngagementUser(engagementId, userId, updateData) {
+    try {
+      // Find the engagement user record
+      const engagementUser = await EngagementUser.findOne({
+        where: {
+          engagement_id: engagementId,
+          user_id: userId
+        }
+      });
+
+      if (!engagementUser) {
+        throw new Error('User is not a member of this engagement');
+      }
+
+      // Only allow updating confirmation_tool and sampling_tool
+      const allowedFields = ['confirmation_tool', 'sampling_tool'];
+      const updates = {};
+      
+      for (const field of allowedFields) {
+        if (updateData[field] !== undefined) {
+          updates[field] = updateData[field];
+        }
+      }
+
+      if (Object.keys(updates).length === 0) {
+        throw new Error('No valid fields to update');
+      }
+
+      // Update the engagement user
+      await engagementUser.update(updates);
+
+      return engagementUser;
+    } catch (error) {
+      logger.error('Update engagement user error:', error);
+      throw error;
     }
   }
 }
