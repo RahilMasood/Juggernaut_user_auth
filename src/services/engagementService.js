@@ -557,12 +557,12 @@ class EngagementService {
       logger.info(`Found firm_id ${firmId} for engagement ${engagementId}`);
 
       // Query users from the same firm who have "confirmation" in allowed_tools
+      // Note: designation is not stored in users table - it comes from UI/people_data.json
       const query = `
         SELECT 
           u.id,
           u.user_name,
           u.email,
-          u.designation,
           u.type,
           u.is_active,
           u.allowed_tools
