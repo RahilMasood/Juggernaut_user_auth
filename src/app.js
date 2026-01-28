@@ -30,7 +30,8 @@ const app = express();
 
 // Trust proxy (required for Railway deployment)
 // Railway uses proxies and sets X-Forwarded-For headers
-app.set('trust proxy', true);
+// Use 1 instead of true to trust only the first proxy (safer for rate limiting)
+app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet());

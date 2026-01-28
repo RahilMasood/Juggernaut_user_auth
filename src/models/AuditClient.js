@@ -70,5 +70,20 @@ const AuditClient = sequelize.define('AuditClient', {
   ]
 });
 
+// Define associations
+AuditClient.associate = function(models) {
+  // AuditClient belongs to Firm
+  AuditClient.belongsTo(models.Firm, {
+    foreignKey: 'firm_id',
+    as: 'firm'
+  });
+  
+  // AuditClient has many Engagements
+  AuditClient.hasMany(models.Engagement, {
+    foreignKey: 'audit_client_id',
+    as: 'engagements'
+  });
+};
+
 module.exports = AuditClient;
 

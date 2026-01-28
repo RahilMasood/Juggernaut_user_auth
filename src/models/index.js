@@ -45,5 +45,9 @@ if (typeof Firm.associate === 'function') {
   Firm.associate(models);
 }
 
+if (typeof AuditClient.associate === 'function') {
+  AuditClient.associate(models);
+}
+
 module.exports = models;
 
