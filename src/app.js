@@ -20,6 +20,9 @@ const clientOnboardingRoutes = require('./routes/clientOnboarding');
 const engagementManagementRoutes = require('./routes/engagementManagement');
 const engagementsPublicRoutes = require('./routes/engagementsPublic');
 
+// SharePoint config route
+const sharepointConfigRoutes = require('./routes/sharepointConfig');
+
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 
@@ -90,30 +93,17 @@ app.use('/api/v1/webhooks', webhookRoutes);
 app.use('/api/v1/clients', clientRoutes);
 app.use('/api/v1/independence', independenceRoutes);
 app.use('/api/v1/firms', firmRoutes);
-app.use('/api/v1/sharepoint-config', require('./routes/sharepointConfig'));
-app.use('/api/v1/external-users', require('./routes/externalUsers'));
+app.use('/api/v1/sharepoint-config', sharepointConfigRoutes);
 
 // New admin routes for 3 pages
 // IMPORTANT: Register engagementsPublicRoutes BEFORE engagementManagementRoutes
 // to ensure POST /clients/:clientId/engagements uses regular auth, not admin auth
 app.use('/api/v1/admin', engagementsPublicRoutes); // Create engagement - no admin required (MUST BE FIRST)
 app.use('/api/v1/admin', adminRoutes); // Page 1: Admin login + User CRUD
-app.use('/api/v1/admin', clientOnboardingRoutes); // Page 2: Client Onboarding (admin)
-app.use('/api/v1/client-onboarding', clientOnboardingRoutes); // Page 2: Client Onboarding (regular users)
-app.use('/api/v1/admin', engagementManagementRoutes); // Page 3: Engagement Management (other routes)
+app.use('/api/v1/admin', clientOnboardingRoutes); // Page 2: Client onboarding
+app.use('/api/v1/admin', engagementManagementRoutes); // Page 3: Engagement management
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: {
-      code: 'NOT_FOUND',
-      message: 'Route not found'
-    }
-  });
-});
-
-// Global error handler (must be last)
+// Error handling middleware (must be last)
 app.use(errorHandler);
 
 module.exports = app;
