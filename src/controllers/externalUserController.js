@@ -228,7 +228,6 @@ class ExternalUserController {
         engagement_id: u.engagement_id,
         engagement_name: u.engagement?.engagement_name,
         client_name: u.engagement?.auditClient?.client_name,
-        period_end_date: u.engagement?.period_end_date,
         confirmation_client: u.confirmation_client,
         confirmation_party: u.confirmation_party
       }));

@@ -78,8 +78,7 @@ class SharePointConfigController {
         site_path: firm.site_path || engagement.site_path,
         doc_library: engagement.doc_library,
         fy_year: engagement.fy_year,
-        engagement_name: engagement.engagement_name,
-        period_end_date: engagement.period_end_date
+        engagement_name: engagement.engagement_name
       };
 
       res.json({

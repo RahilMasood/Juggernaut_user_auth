@@ -3,7 +3,6 @@
 
 -- Add new fields to engagements table
 ALTER TABLE engagements 
-ADD COLUMN IF NOT EXISTS period_end_date DATE,
 ADD COLUMN IF NOT EXISTS doc_library VARCHAR(255),
 ADD COLUMN IF NOT EXISTS fy_year VARCHAR(255);
 
