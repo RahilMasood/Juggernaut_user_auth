@@ -28,13 +28,15 @@ class SharePointConfigController {
       const query = `
         SELECT 
           e.id as engagement_id,
-          e.doc_library,
-          e.fy_year,
+          COALESCE(e.doc_library, ac.client_name) as doc_library,
+          COALESCE(e.fy_year, e.engagement_name) as fy_year,
           f.tenant_id,
           f.client_id,
           f.client_secret,
           f.site_hostname,
-          f.site_path
+          f.site_path,
+          ac.client_name,
+          e.engagement_name
         FROM engagements e
         INNER JOIN audit_clients ac ON e.audit_client_id = ac.id
         INNER JOIN firms f ON ac.firm_id = f.id
@@ -56,8 +58,25 @@ class SharePointConfigController {
         });
       }
 
-      // Validate all required fields are present
-      const requiredFields = ['tenant_id', 'client_id', 'client_secret', 'site_hostname', 'site_path', 'doc_library', 'fy_year'];
+      // Derive doc_library and fy_year if not set in engagement
+      // doc_library defaults to client_name (like Juggernaut Frontend)
+      // fy_year defaults to engagement_name (like Juggernaut Frontend)
+      // If still empty, use engagement ID as fallback
+      let doc_library = results.doc_library || results.client_name || '';
+      let fy_year = results.fy_year || results.engagement_name || '';
+      
+      // Final fallback: use engagement ID if still empty
+      if (!doc_library) {
+        doc_library = results.client_name || `engagement_${engagementId.substring(0, 8)}`;
+        logger.warn(`doc_library is empty for engagement ${engagementId}, using fallback: ${doc_library}`);
+      }
+      if (!fy_year) {
+        fy_year = results.engagement_name || `FY_${engagementId.substring(0, 8)}`;
+        logger.warn(`fy_year is empty for engagement ${engagementId}, using fallback: ${fy_year}`);
+      }
+
+      // Validate required fields are present (firm-level fields are required)
+      const requiredFields = ['tenant_id', 'client_id', 'client_secret', 'site_hostname', 'site_path'];
       const missingFields = requiredFields.filter(field => !results[field]);
 
       if (missingFields.length > 0) {
@@ -77,8 +96,8 @@ class SharePointConfigController {
         client_secret: results.client_secret,
         site_hostname: results.site_hostname,
         site_path: results.site_path,
-        doc_library: results.doc_library,
-        fy_year: results.fy_year
+        doc_library: doc_library,
+        fy_year: fy_year
       };
 
       logger.info(`SharePoint config loaded for engagement ${engagementId}`);
