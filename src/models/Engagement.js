@@ -33,6 +33,21 @@ const Engagement = sequelize.define('Engagement', {
     type: DataTypes.STRING,
     allowNull: true,
     comment: 'Name of the engagement (e.g., Test10_FY26)'
+  },
+  period_end_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'Period end date for the engagement'
+  },
+  doc_library: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'SharePoint document library name for this engagement'
+  },
+  fy_year: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'Fiscal year identifier for this engagement (e.g., TestClient_FY25)'
   }
 }, {
   tableName: 'engagements',

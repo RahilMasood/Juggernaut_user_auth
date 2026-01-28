@@ -90,6 +90,8 @@ app.use('/api/v1/webhooks', webhookRoutes);
 app.use('/api/v1/clients', clientRoutes);
 app.use('/api/v1/independence', independenceRoutes);
 app.use('/api/v1/firms', firmRoutes);
+app.use('/api/v1/sharepoint-config', require('./routes/sharepointConfig'));
+app.use('/api/v1/external-users', require('./routes/externalUsers'));
 
 // New admin routes for 3 pages
 // IMPORTANT: Register engagementsPublicRoutes BEFORE engagementManagementRoutes
