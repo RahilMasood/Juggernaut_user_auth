@@ -531,25 +531,28 @@ class EngagementService {
     try {
       const { Op } = require('sequelize');
       const { sequelize } = require('../config/database');
-      const AuditClient = require('../models/AuditClient');
 
       logger.info(`Getting users available for confirmation for engagement ${engagementId}`);
 
-      // Get firm_id from engagement
-      const engagement = await Engagement.findByPk(engagementId, {
-        include: [{
-          model: AuditClient,
-          as: 'auditClient',
-          attributes: ['firm_id']
-        }]
+      // Get firm_id from engagement using direct SQL query to avoid association issues
+      const firmQuery = `
+        SELECT ac.firm_id
+        FROM engagements e
+        INNER JOIN audit_clients ac ON e.audit_client_id = ac.id
+        WHERE e.id = :engagementId
+      `;
+
+      const [firmResult] = await sequelize.query(firmQuery, {
+        replacements: { engagementId },
+        type: sequelize.QueryTypes.SELECT
       });
 
-      if (!engagement || !engagement.auditClient) {
+      if (!firmResult || !firmResult.firm_id) {
         logger.error(`Engagement ${engagementId} not found or does not have associated audit client`);
         throw new Error('Engagement not found or does not have associated audit client');
       }
 
-      const firmId = engagement.auditClient.firm_id;
+      const firmId = firmResult.firm_id;
       logger.info(`Found firm_id ${firmId} for engagement ${engagementId}`);
 
       // Query users from the same firm who have "confirmation" in allowed_tools
