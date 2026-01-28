@@ -64,8 +64,6 @@ class EngagementService {
     try {
       const engagement = await Engagement.findByPk(engagementId, {
         include: [
-          { association: 'firm', attributes: ['id', 'name'] },
-          { association: 'creator', attributes: ['id', 'email', 'first_name', 'last_name'] },
           {
             model: AuditClient,
             as: 'auditClient',
@@ -241,10 +239,13 @@ class EngagementService {
 
       await engagement.save();
 
-      // Log engagement update
+      // Log engagement update - get firm_id from auditClient
+      const auditClient = await AuditClient.findByPk(engagement.audit_client_id);
+      const firmId = auditClient ? auditClient.firm_id : null;
+      
       await authService.logAuditEvent(
         updatedBy,
-        engagement.firm_id,
+        firmId,
         'UPDATE_ENGAGEMENT',
         'ENGAGEMENT',
         engagement.id,
