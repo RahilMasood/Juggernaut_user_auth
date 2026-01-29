@@ -12,7 +12,7 @@ class ExternalUserService {
   async findByEmail(email) {
     try {
       const query = `
-        SELECT id, email, name, designation, password_hash, created_at, updated_at
+        SELECT id, email, name, designation, password_hash, confirmation_client, created_at, updated_at
         FROM external_users
         WHERE email = :email
         LIMIT 1
@@ -51,9 +51,9 @@ class ExternalUserService {
 
       // Insert new user with UUID generation
       const insertQuery = `
-        INSERT INTO external_users (id, email, name, designation, password_hash, created_at, updated_at)
-        VALUES (gen_random_uuid(), :email, :name, :designation, :password_hash, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        RETURNING id, email, name, designation, created_at, updated_at
+        INSERT INTO external_users (id, email, name, designation, password_hash, confirmation_client, created_at, updated_at)
+        VALUES (gen_random_uuid(), :email, :name, :designation, :password_hash, ARRAY[]::TEXT[], CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        RETURNING id, email, name, designation, confirmation_client, created_at, updated_at
       `;
       
       const [results] = await sequelize.query(insertQuery, {
@@ -93,7 +93,7 @@ class ExternalUserService {
             designation = COALESCE(:designation, designation),
             updated_at = CURRENT_TIMESTAMP
         WHERE email = :email
-        RETURNING id, email, name, designation, created_at, updated_at
+        RETURNING id, email, name, designation, confirmation_client, created_at, updated_at
       `;
       
       await sequelize.query(updateQuery, {
@@ -110,6 +110,60 @@ class ExternalUserService {
       return updatedUser;
     } catch (error) {
       logger.error('Error updating external user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Add engagement_id to confirmation_client array
+   * @param {string} email - Email of user
+   * @param {string} engagementId - Engagement ID to add
+   * @returns {Promise<Object>} Updated user object
+   */
+  async addEngagementToClient(email, engagementId) {
+    try {
+      if (!email || !engagementId) {
+        throw new Error('Email and engagementId are required');
+      }
+
+      // Get current confirmation_client array
+      const user = await this.findByEmail(email);
+      if (!user) {
+        throw new Error('External user not found');
+      }
+
+      const currentEngagements = user.confirmation_client || [];
+      
+      // Check if engagement_id already exists
+      if (currentEngagements.includes(engagementId)) {
+        logger.info(`Engagement ${engagementId} already exists for user ${email}`);
+        return user;
+      }
+
+      // Append engagement_id to array
+      const updatedEngagements = [...currentEngagements, engagementId];
+
+      const updateQuery = `
+        UPDATE external_users
+        SET confirmation_client = :engagements,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE email = :email
+        RETURNING id, email, name, designation, confirmation_client, created_at, updated_at
+      `;
+      
+      await sequelize.query(updateQuery, {
+        replacements: {
+          email,
+          engagements: updatedEngagements
+        },
+        type: sequelize.QueryTypes.UPDATE
+      });
+      
+      const updatedUser = await this.findByEmail(email);
+      logger.info(`Added engagement ${engagementId} to confirmation_client for user ${email}`);
+      return updatedUser;
+    } catch (error) {
+      logger.error('Error adding engagement to client:', error);
       throw error;
     }
   }

@@ -16,5 +16,12 @@ router.get('/search', externalUserController.searchByEmail.bind(externalUserCont
  */
 router.post('/', externalUserController.createUser.bind(externalUserController));
 
+/**
+ * @route   POST /api/v1/external-users/:email/add-engagement
+ * @desc    Add engagement_id to client's confirmation_client array
+ * @access  Public (or add auth middleware if needed)
+ */
+router.post('/:email/add-engagement', externalUserController.addEngagementToClient.bind(externalUserController));
+
 module.exports = router;
 
