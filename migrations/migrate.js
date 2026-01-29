@@ -182,7 +182,7 @@ async function migrate() {
     try {
       const { Permission } = require('../src/models');
       if (Permission) {
-        await seedDefaultPermissions();
+    await seedDefaultPermissions();
       }
     } catch (error) {
       logger.warn('Could not seed default permissions:', error.message);
@@ -198,7 +198,7 @@ async function migrate() {
 
 async function seedDefaultPermissions() {
   try {
-    const { Permission } = require('../src/models');
+  const { Permission } = require('../src/models');
     if (!Permission) {
       logger.warn('Permission model not found, skipping seed');
       return;
@@ -231,12 +231,12 @@ async function seedDefaultPermissions() {
     ];
     
     for (const perm of defaultPermissions) {
-      await Permission.findOrCreate({
-        where: { name: perm.name },
-        defaults: perm
-      });
-    }
-    
+    await Permission.findOrCreate({
+      where: { name: perm.name },
+      defaults: perm
+    });
+  }
+  
     logger.info(`Seeded ${defaultPermissions.length} default permissions`);
   } catch (error) {
     logger.error('Error seeding default permissions:', error);
