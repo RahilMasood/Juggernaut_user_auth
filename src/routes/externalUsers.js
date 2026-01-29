@@ -30,5 +30,12 @@ router.post('/:email/add-engagement', externalUserController.addEngagementToClie
  */
 router.post('/:email/add-engagement-party', externalUserController.addEngagementToParty.bind(externalUserController));
 
+/**
+ * @route   PATCH /api/v1/external-users/:email
+ * @desc    Update external user
+ * @access  Public (or add auth middleware if needed)
+ */
+router.patch('/:email', externalUserController.updateUser.bind(externalUserController));
+
 module.exports = router;
 

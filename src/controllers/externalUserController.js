@@ -196,6 +196,64 @@ class ExternalUserController {
       });
     }
   }
+
+  /**
+   * Update external user
+   * PATCH /api/v1/external-users/:email
+   */
+  async updateUser(req, res, next) {
+    try {
+      const { email } = req.params;
+      const { name, designation, organization } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Email is required'
+          }
+        });
+      }
+
+      const user = await externalUserService.updateUser(email, {
+        name,
+        designation,
+        organization
+      });
+
+      // Don't return password_hash
+      const { password_hash, ...userData } = user;
+      
+      res.json({
+        success: true,
+        data: {
+          user: userData,
+          message: 'External user updated successfully'
+        }
+      });
+    } catch (error) {
+      logger.error('Error updating external user:', error);
+      
+      if (error.message.includes('not found')) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: error.message
+          }
+        });
+      }
+      
+      return res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: error.message
+        }
+      });
+    }
+  }
 }
 
 module.exports = new ExternalUserController();
