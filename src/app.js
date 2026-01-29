@@ -22,6 +22,7 @@ const engagementsPublicRoutes = require('./routes/engagementsPublic');
 
 // SharePoint config route
 const sharepointConfigRoutes = require('./routes/sharepointConfig');
+const externalUsersRoutes = require('./routes/externalUsers');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -99,6 +100,7 @@ app.use('/api/v1/clients', clientRoutes);
 app.use('/api/v1/independence', independenceRoutes);
 app.use('/api/v1/firms', firmRoutes);
 app.use('/api/v1/sharepoint-config', sharepointConfigRoutes);
+app.use('/api/v1/external-users', externalUsersRoutes);
 
 // New admin routes for 3 pages
 // IMPORTANT: Register engagementsPublicRoutes BEFORE engagementManagementRoutes
