@@ -12,7 +12,7 @@ class ExternalUserService {
   async findByEmail(email) {
     try {
       const query = `
-        SELECT id, email, name, designation, password_hash, engagement_id, created_at, updated_at
+        SELECT id, email, name, designation, password_hash, created_at, updated_at
         FROM external_users
         WHERE email = :email
         LIMIT 1
@@ -51,9 +51,9 @@ class ExternalUserService {
 
       // Insert new user
       const insertQuery = `
-        INSERT INTO external_users (email, name, designation, password_hash, engagement_id, created_at, updated_at)
-        VALUES (:email, :name, :designation, :password_hash, ARRAY[]::TEXT[], CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        RETURNING id, email, name, designation, engagement_id, created_at, updated_at
+        INSERT INTO external_users (email, name, designation, password_hash, created_at, updated_at)
+        VALUES (:email, :name, :designation, :password_hash, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        RETURNING id, email, name, designation, created_at, updated_at
       `;
       
       const [results] = await sequelize.query(insertQuery, {
@@ -93,7 +93,7 @@ class ExternalUserService {
             designation = COALESCE(:designation, designation),
             updated_at = CURRENT_TIMESTAMP
         WHERE email = :email
-        RETURNING id, email, name, designation, engagement_id, created_at, updated_at
+        RETURNING id, email, name, designation, created_at, updated_at
       `;
       
       await sequelize.query(updateQuery, {
