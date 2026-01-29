@@ -132,20 +132,15 @@ class ExternalUserService {
         throw new Error('External user not found');
       }
 
-      const currentEngagements = user.confirmation_client || [];
-      
-      // Check if engagement_id already exists
-      if (currentEngagements.includes(engagementId)) {
-        logger.info(`Engagement ${engagementId} already exists for user ${email}`);
-        return user;
-      }
-
-      // Append engagement_id to array
-      const updatedEngagements = [...currentEngagements, engagementId];
-
+      // Append engagement_id to array using PostgreSQL array_append function
+      // Only append if engagement_id doesn't already exist in the array
       const updateQuery = `
         UPDATE external_users
-        SET confirmation_client = :engagements,
+        SET confirmation_client = CASE 
+            WHEN :engagementId = ANY(COALESCE(confirmation_client, ARRAY[]::TEXT[])) 
+            THEN confirmation_client
+            ELSE array_append(COALESCE(confirmation_client, ARRAY[]::TEXT[]), :engagementId)
+          END,
             updated_at = CURRENT_TIMESTAMP
         WHERE email = :email
         RETURNING id, email, name, designation, confirmation_client, created_at, updated_at
@@ -154,7 +149,7 @@ class ExternalUserService {
       await sequelize.query(updateQuery, {
         replacements: {
           email,
-          engagements: updatedEngagements
+          engagementId
         },
         type: sequelize.QueryTypes.UPDATE
       });
