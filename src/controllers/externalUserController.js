@@ -97,12 +97,55 @@ class ExternalUserController {
   }
 
   /**
+   * Add engagement to party's confirmation_party array
+   * POST /api/v1/external-users/:email/add-engagement-party
+   */
+  async addEngagementToParty(req, res, next) {
+    try {
+      const { email } = req.params;
+      const { engagement_id } = req.body;
+      
+      if (!email || !engagement_id) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Email and engagement_id are required'
+          }
+        });
+      }
+
+      const user = await externalUserService.addEngagementToParty(email, engagement_id);
+
+      // Don't return password_hash
+      const { password_hash, ...userData } = user;
+      
+      res.json({
+        success: true,
+        data: {
+          user: userData,
+          message: 'Engagement added to party successfully'
+        }
+      });
+    } catch (error) {
+      logger.error('Error adding engagement to party:', error);
+      return res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: error.message
+        }
+      });
+    }
+  }
+
+  /**
    * Create external user
    * POST /api/v1/external-users
    */
   async createUser(req, res, next) {
     try {
-      const { email, name, designation } = req.body;
+      const { email, name, designation, organization } = req.body;
       
       if (!email || !name) {
         return res.status(400).json({
@@ -117,7 +160,8 @@ class ExternalUserController {
       const user = await externalUserService.createUser({
         email,
         name,
-        designation: designation || ''
+        designation: designation || null,
+        organization: organization || null
       });
 
       // Don't return password_hash

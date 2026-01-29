@@ -12,7 +12,7 @@ class ExternalUserService {
   async findByEmail(email) {
     try {
       const query = `
-        SELECT id, email, name, designation, password_hash, confirmation_client, created_at, updated_at
+        SELECT id, email, name, designation, organization, password_hash, confirmation_client, confirmation_party, created_at, updated_at
         FROM external_users
         WHERE email = :email
         LIMIT 1
@@ -37,7 +37,7 @@ class ExternalUserService {
    */
   async createUser(userData) {
     try {
-      const { email, name, designation } = userData;
+      const { email, name, designation, organization } = userData;
       
       // Check if user already exists
       const existingUser = await this.findByEmail(email);
@@ -51,16 +51,17 @@ class ExternalUserService {
 
       // Insert new user with UUID generation
       const insertQuery = `
-        INSERT INTO external_users (id, email, name, designation, password_hash, confirmation_client, created_at, updated_at)
-        VALUES (gen_random_uuid(), :email, :name, :designation, :password_hash, ARRAY[]::TEXT[], CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        RETURNING id, email, name, designation, confirmation_client, created_at, updated_at
+        INSERT INTO external_users (id, email, name, designation, organization, password_hash, confirmation_client, confirmation_party, created_at, updated_at)
+        VALUES (gen_random_uuid(), :email, :name, :designation, :organization, :password_hash, ARRAY[]::TEXT[], ARRAY[]::TEXT[], CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        RETURNING id, email, name, designation, organization, confirmation_client, confirmation_party, created_at, updated_at
       `;
       
       const [results] = await sequelize.query(insertQuery, {
         replacements: {
           email,
           name,
-          designation: designation || '',
+          designation: designation || null,
+          organization: organization || null,
           password_hash
         },
         type: sequelize.QueryTypes.INSERT
@@ -85,22 +86,24 @@ class ExternalUserService {
    */
   async updateUser(email, updateData) {
     try {
-      const { name, designation } = updateData;
+      const { name, designation, organization } = updateData;
       
       const updateQuery = `
         UPDATE external_users
         SET name = COALESCE(:name, name),
             designation = COALESCE(:designation, designation),
+            organization = COALESCE(:organization, organization),
             updated_at = CURRENT_TIMESTAMP
         WHERE email = :email
-        RETURNING id, email, name, designation, confirmation_client, created_at, updated_at
+        RETURNING id, email, name, designation, organization, confirmation_client, confirmation_party, created_at, updated_at
       `;
       
       await sequelize.query(updateQuery, {
         replacements: {
           email,
           name: name || null,
-          designation: designation || null
+          designation: designation || null,
+          organization: organization || null
         },
         type: sequelize.QueryTypes.UPDATE
       });
@@ -159,6 +162,55 @@ class ExternalUserService {
       return updatedUser;
     } catch (error) {
       logger.error('Error adding engagement to client:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Add engagement_id to confirmation_party array
+   * @param {string} email - Email of user
+   * @param {string} engagementId - Engagement ID to add
+   * @returns {Promise<Object>} Updated user object
+   */
+  async addEngagementToParty(email, engagementId) {
+    try {
+      if (!email || !engagementId) {
+        throw new Error('Email and engagementId are required');
+      }
+
+      // Get current confirmation_party array
+      const user = await this.findByEmail(email);
+      if (!user) {
+        throw new Error('External user not found');
+      }
+
+      // Append engagement_id to array using PostgreSQL array_append function
+      // Only append if engagement_id doesn't already exist in the array
+      const updateQuery = `
+        UPDATE external_users
+        SET confirmation_party = CASE 
+            WHEN :engagementId = ANY(COALESCE(confirmation_party, ARRAY[]::TEXT[])) 
+            THEN confirmation_party
+            ELSE array_append(COALESCE(confirmation_party, ARRAY[]::TEXT[]), :engagementId)
+          END,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE email = :email
+        RETURNING id, email, name, designation, organization, confirmation_client, confirmation_party, created_at, updated_at
+      `;
+      
+      await sequelize.query(updateQuery, {
+        replacements: {
+          email,
+          engagementId
+        },
+        type: sequelize.QueryTypes.UPDATE
+      });
+      
+      const updatedUser = await this.findByEmail(email);
+      logger.info(`Added engagement ${engagementId} to confirmation_party for user ${email}`);
+      return updatedUser;
+    } catch (error) {
+      logger.error('Error adding engagement to party:', error);
       throw error;
     }
   }

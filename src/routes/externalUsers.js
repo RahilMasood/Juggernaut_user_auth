@@ -23,5 +23,12 @@ router.post('/', externalUserController.createUser.bind(externalUserController))
  */
 router.post('/:email/add-engagement', externalUserController.addEngagementToClient.bind(externalUserController));
 
+/**
+ * @route   POST /api/v1/external-users/:email/add-engagement-party
+ * @desc    Add engagement_id to party's confirmation_party array
+ * @access  Public (or add auth middleware if needed)
+ */
+router.post('/:email/add-engagement-party', externalUserController.addEngagementToParty.bind(externalUserController));
+
 module.exports = router;
 
