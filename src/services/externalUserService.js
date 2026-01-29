@@ -49,10 +49,10 @@ class ExternalUserService {
       const password = 'Test@1234';
       const password_hash = await bcrypt.hash(password, authConfig.bcrypt.rounds);
 
-      // Insert new user
+      // Insert new user with UUID generation
       const insertQuery = `
-        INSERT INTO external_users (email, name, designation, password_hash, created_at, updated_at)
-        VALUES (:email, :name, :designation, :password_hash, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        INSERT INTO external_users (id, email, name, designation, password_hash, created_at, updated_at)
+        VALUES (gen_random_uuid(), :email, :name, :designation, :password_hash, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         RETURNING id, email, name, designation, created_at, updated_at
       `;
       
