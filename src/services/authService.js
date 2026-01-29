@@ -1,7 +1,9 @@
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
+const bcrypt = require('bcrypt');
 const authConfig = require('../config/auth');
 const { User, RefreshToken, AuditLog } = require('../models');
+const externalUserService = require('./externalUserService');
 const { generatePassword } = require('../utils/passwordGenerator');
 const logger = require('../utils/logger');
 
@@ -16,46 +18,97 @@ class AuthService {
    */
   async login(email, password, ipAddress, userAgent, applicationType = 'main') {
     try {
-      // Find user
-      const user = await User.findOne({ 
+      let user = null;
+      let isExternalUser = false;
+      let externalUser = null;
+
+      // First, check users table (auditors)
+      user = await User.findOne({ 
         where: { email },
         include: [
           { association: 'firm' }
         ]
       });
 
+      // If not found in users table, check external_users table
       if (!user) {
-        await this.logAuditEvent(null, null, 'LOGIN', null, null, 
-          { email }, ipAddress, userAgent, 'FAILURE', 'User not found');
-        throw new Error('Invalid credentials');
-      }
+        externalUser = await externalUserService.findByEmail(email);
+        
+        if (externalUser) {
+          isExternalUser = true;
+          // Verify password for external user
+          const isValidPassword = await bcrypt.compare(password, externalUser.password_hash);
+          if (!isValidPassword) {
+            await this.logAuditEvent(null, null, 'LOGIN', null, null, 
+              { email, user_type: 'external' }, ipAddress, userAgent, 'FAILURE', 'Invalid password');
+            throw new Error('Invalid credentials');
+          }
+          
+          // Create a user-like object for external users
+          // Structure matches User model for compatibility
+          user = {
+            id: externalUser.id,
+            email: externalUser.email,
+            user_name: externalUser.name || externalUser.email, // Use name or email as fallback
+            name: externalUser.name, // Also include 'name' for compatibility
+            designation: externalUser.designation,
+            organization: externalUser.organization,
+            firm_id: null, // External users don't have firm_id
+            is_active: true,
+            type: 'external',
+            allowed_tools: ['confirmation'], // External users have access to confirmation tool
+            must_change_password: false,
+            toJSON: function() {
+              return {
+                id: this.id,
+                email: this.email,
+                user_name: this.user_name,
+                name: this.name,
+                designation: this.designation,
+                organization: this.organization,
+                firm_id: this.firm_id,
+                type: this.type,
+                is_active: this.is_active,
+                allowed_tools: this.allowed_tools
+              };
+            }
+          };
+        } else {
+          // User not found in either table
+          await this.logAuditEvent(null, null, 'LOGIN', null, null, 
+            { email }, ipAddress, userAgent, 'FAILURE', 'User not found');
+          throw new Error('Invalid credentials');
+        }
+      } else {
+        // User found in users table - proceed with normal checks
+        // Check if account is locked
+        if (user.isLocked()) {
+          await this.logAuditEvent(user.id, user.firm_id, 'LOGIN', 'USER', user.id,
+            { reason: 'Account locked' }, ipAddress, userAgent, 'FAILURE', 'Account locked');
+          throw new Error('Account is locked due to too many failed login attempts');
+        }
 
-      // Check if account is locked
-      if (user.isLocked()) {
-        await this.logAuditEvent(user.id, user.firm_id, 'LOGIN', 'USER', user.id,
-          { reason: 'Account locked' }, ipAddress, userAgent, 'FAILURE', 'Account locked');
-        throw new Error('Account is locked due to too many failed login attempts');
-      }
+        // Check if account is active
+        if (!user.is_active) {
+          await this.logAuditEvent(user.id, user.firm_id, 'LOGIN', 'USER', user.id,
+            { reason: 'Account inactive' }, ipAddress, userAgent, 'FAILURE', 'Account inactive');
+          throw new Error('Account is inactive');
+        }
 
-      // Check if account is active
-      if (!user.is_active) {
-        await this.logAuditEvent(user.id, user.firm_id, 'LOGIN', 'USER', user.id,
-          { reason: 'Account inactive' }, ipAddress, userAgent, 'FAILURE', 'Account inactive');
-        throw new Error('Account is inactive');
-      }
-
-      // Verify password
-      const isValidPassword = await user.comparePassword(password);
-      if (!isValidPassword) {
-        await user.incrementFailedLogins();
-        await this.logAuditEvent(user.id, user.firm_id, 'LOGIN', 'USER', user.id,
-          { reason: 'Invalid password' }, ipAddress, userAgent, 'FAILURE', 'Invalid password');
-        throw new Error('Invalid credentials');
+        // Verify password
+        const isValidPassword = await user.comparePassword(password);
+        if (!isValidPassword) {
+          await user.incrementFailedLogins();
+          await this.logAuditEvent(user.id, user.firm_id, 'LOGIN', 'USER', user.id,
+            { reason: 'Invalid password' }, ipAddress, userAgent, 'FAILURE', 'Invalid password');
+          throw new Error('Invalid credentials');
+        }
       }
 
       // Tool-based session enforcement: Check if user is already logged in for THIS SPECIFIC TOOL
       // ClientOnboard always allows login (skip session check)
-      if (applicationType !== 'clientonboard') {
+      // Skip session check for external users (they don't use RefreshToken table)
+      if (applicationType !== 'clientonboard' && !isExternalUser) {
         const activeTokens = await RefreshToken.findAll({
           where: {
             user_id: user.id,
@@ -90,7 +143,8 @@ class AuthService {
       }
 
       // Check if user has access to this tool (if not clientonboard)
-      if (applicationType !== 'clientonboard' && applicationType !== 'main') {
+      // External users always have access to confirmation tool
+      if (applicationType !== 'clientonboard' && applicationType !== 'main' && !isExternalUser) {
         // Check user's allowed_tools
         const allowedTools = user.allowed_tools || [];
         if (!allowedTools.includes(applicationType) && !allowedTools.includes('main')) {
@@ -110,23 +164,34 @@ class AuthService {
         }
       }
 
-      // Reset failed login attempts
-      await user.resetFailedLogins();
+      // Reset failed login attempts (only for users table, not external users)
+      if (!isExternalUser) {
+        await user.resetFailedLogins();
+      }
 
       // Generate tokens
       const accessToken = this.generateAccessToken(user);
-      const refreshToken = await this.generateRefreshToken(user, ipAddress, userAgent, applicationType);
+      
+      // Only generate refresh token for users table (not external users)
+      let refreshToken = null;
+      if (!isExternalUser) {
+        refreshToken = await this.generateRefreshToken(user, ipAddress, userAgent, applicationType);
+      }
 
       // Log successful login
-      await this.logAuditEvent(user.id, user.firm_id, 'LOGIN', 'USER', user.id,
-        {}, ipAddress, userAgent, 'SUCCESS');
+      await this.logAuditEvent(user.id, user.firm_id, 'LOGIN', isExternalUser ? 'EXTERNAL_USER' : 'USER', user.id,
+        { user_type: isExternalUser ? 'external' : 'auditor' }, ipAddress, userAgent, 'SUCCESS');
 
-      return {
+      // Ensure refreshToken is always a string (null becomes "null" string for localStorage compatibility)
+      // External users don't use refresh tokens, but we return null to maintain API contract
+      const responseData = {
         user: user.toJSON(),
         accessToken,
-        refreshToken,
-        mustChangePassword: user.must_change_password
+        refreshToken: refreshToken || null, // Explicitly set to null if not generated
+        mustChangePassword: isExternalUser ? false : (user.must_change_password || false)
       };
+
+      return responseData;
     } catch (error) {
       logger.error('Login error:', error);
       throw error;
@@ -139,9 +204,9 @@ class AuthService {
   generateAccessToken(user) {
     const payload = {
       userId: user.id,
-      firmId: user.firm_id,
+      firmId: user.firm_id || null, // External users don't have firm_id
       email: user.email,
-      type: user.type
+      type: user.type || 'external'
     };
 
     return jwt.sign(payload, authConfig.jwt.accessSecret, {
